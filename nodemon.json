@@ -1,7 +1,6 @@
 {
   "watch": ["src"],
   "ext": "js,json",
-  "execMap": {
-    "js": "sucrase-node"
-  }
+  "ignore": ["node_modules"],
+  "exec": "sucrase-node src/server.js"
 }
