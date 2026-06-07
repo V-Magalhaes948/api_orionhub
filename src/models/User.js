@@ -5,6 +5,12 @@ export default class User extends Model {
   static init(sequelize) {
     super.init(
       {
+        id: {
+          type: Sequelize.UUID,
+          defaultValue: Sequelize.UUIDV4,
+          primaryKey: true,
+          allowNull: false,
+        },
         nome: {
           type: Sequelize.STRING,
           defaultValue: '',
@@ -26,6 +32,10 @@ export default class User extends Model {
               msg: 'E-mail inválido.',
             },
           },
+        },
+        active: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: true,
         },
         password_hash: {
           type: Sequelize.STRING,
@@ -58,5 +68,9 @@ export default class User extends Model {
 
   checkPassword(password) {
     return bcrypt.compare(password, this.password_hash);
+  }
+
+  static associate(models) {
+    this.hasMany(models.Bot, { foreignKey: 'user_id', as: 'bots' });
   }
 }

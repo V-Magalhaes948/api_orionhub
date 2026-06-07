@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { formatDate } from '../utils/formatDate';
 
 class AuthController {
   async register(req, res) {
@@ -17,11 +18,20 @@ class AuthController {
         email,
         password,
       });
-      return res
-        .status(201)
-        .json({ message: 'User registered successfully', user: newUser });
+      return res.status(201).json({
+        message: 'User registered successfully',
+        user: {
+          ...newUser.toJSON(),
+          created_at: formatDate(newUser.created_at),
+          updated_at: formatDate(newUser.updated_at),
+        },
+      });
     } catch (error) {
-      return res.status(500).json({ message: 'Error registering user', error });
+      if (error.name === 'SequelizeValidationError') {
+        const messages = error.errors.map((e) => e.message);
+        return res.status(400).json({ errors: messages });
+      }
+      return res.status(500).json({ message: 'Internal server error' });
     }
   }
 
