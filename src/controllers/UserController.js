@@ -1,5 +1,7 @@
-import User from '../models/User.js';
 import jwt from 'jsonwebtoken';
+
+import User from '../models/User.js';
+import { handleError } from '../utils/handleError.js';
 
 const USER_ATTRIBUTES = ['id', 'nome', 'email', 'created_at', 'updated_at'];
 
@@ -12,7 +14,7 @@ class UserController {
       });
       return res.status(200).json(users);
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return handleError(res, error);
     }
   }
 
@@ -27,7 +29,7 @@ class UserController {
       }
       return res.status(200).json(user);
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return handleError(res, error);
     }
   }
 
@@ -54,7 +56,7 @@ class UserController {
         .status(200)
         .json({ message: 'User updated successfully', user });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return handleError(res, error);
     }
   }
 
@@ -69,7 +71,7 @@ class UserController {
       await user.update({ active: false });
       return res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
-      return res.status(500).json({ error: error.message });
+      return handleError(res, error);
     }
   }
 }
