@@ -14,6 +14,10 @@ export default class Bot extends Model {
           type: Sequelize.UUID,
           allowNull: false,
         },
+        instance_id: {
+          type: Sequelize.UUID,
+          allowNull: false,
+        },
         name: {
           type: Sequelize.STRING,
           allowNull: false,
@@ -24,12 +28,10 @@ export default class Bot extends Model {
             },
           },
         },
-        phone_number: {
-          type: Sequelize.STRING,
+        mode: {
+          type: Sequelize.ENUM('ai', 'manual'),
           allowNull: false,
-          unique: {
-            msg: 'Número de telefone já cadastrado.',
-          },
+          defaultValue: 'manual',
         },
         system_prompt: {
           type: Sequelize.TEXT,
@@ -50,5 +52,13 @@ export default class Bot extends Model {
 
   static associate(models) {
     this.belongsTo(models.User, { foreignKey: 'user_id', as: 'user' });
+    this.belongsTo(models.Instance, {
+      foreignKey: 'instance_id',
+      as: 'instance',
+    });
+    this.hasMany(models.Conversation, {
+      foreignKey: 'bot_id',
+      as: 'conversations',
+    });
   }
 }

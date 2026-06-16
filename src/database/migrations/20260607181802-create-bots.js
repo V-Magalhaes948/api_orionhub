@@ -16,14 +16,21 @@ module.exports = {
         onDelete: 'CASCADE',
         onUpdate: 'CASCADE',
       },
+      instance_id: {
+        type: Sequelize.UUID,
+        allowNull: false,
+        references: { model: 'instances', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT',
+      },
       name: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      phone_number: {
-        type: Sequelize.STRING,
+      mode: {
+        type: Sequelize.ENUM('ai', 'manual'),
         allowNull: false,
-        unique: true,
+        defaultValue: 'manual',
       },
       system_prompt: {
         type: Sequelize.TEXT,

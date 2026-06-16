@@ -11,10 +11,13 @@ const whiteList = ['http://localhost:3001'];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (whiteList.indexOf(origin) != -1 || !origin) {
+    // permite requisições sem origin (webhooks, Postman, mobile)
+    if (!origin) return callback(null, true);
+
+    if (whiteList.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by Cors'));
+      callback(null, true); // libera tudo por enquanto em desenvolvimento
     }
   },
 };
@@ -27,7 +30,7 @@ class App {
   }
 
   middlewares() {
-    this.app.use(cors(corsOptions));
+    this.app.use(cors());
     this.app.use(helmet());
     this.app.use(express.urlencoded({ extended: true }));
     this.app.use(express.json());
