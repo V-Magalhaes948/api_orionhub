@@ -6,8 +6,35 @@ import Conversation from '../models/Conversation';
 import Message from '../models/Message';
 import WebhookLog from '../models/WebhookLog';
 import Instance from '../models/Instance';
+import Plan from '../models/Plan';
+import Flow from '../models/Flow';
+import FlowStep from '../models/FlowStep';
+import FlowSession from '../models/FlowSession';
+import ContactIdentity from '../models/ContactIdentity';
+import Product from '../models/Product';
+import AdminAuditLog from '../models/AdminAuditLog.js';
+import ActivityLog from '../models/ActivityLog.js';
+import AddonPackage from '../models/AddonPackage.js';
+import PlanAddon from '../models/PlanAddon.js';
 
-const models = [User, Bot, Conversation, Message, WebhookLog, Instance];
+const models = [
+  Plan,
+  User,
+  Instance,
+  Bot,
+  Flow,
+  FlowStep,
+  FlowSession,
+  Conversation,
+  Message,
+  WebhookLog,
+  ContactIdentity,
+  Product,
+  AdminAuditLog,
+  ActivityLog,
+  AddonPackage,
+  PlanAddon,
+];
 
 const connection = new Sequelize(databaseConfig);
 

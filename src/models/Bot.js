@@ -18,6 +18,10 @@ export default class Bot extends Model {
           type: Sequelize.UUID,
           allowNull: false,
         },
+        flow_id: {
+          type: Sequelize.UUID,
+          allowNull: true,
+        },
         name: {
           type: Sequelize.STRING,
           allowNull: false,
@@ -56,9 +60,14 @@ export default class Bot extends Model {
       foreignKey: 'instance_id',
       as: 'instance',
     });
+    this.belongsTo(models.Flow, { foreignKey: 'flow_id', as: 'flow' });
     this.hasMany(models.Conversation, {
       foreignKey: 'bot_id',
       as: 'conversations',
+    });
+    this.hasMany(models.ContactIdentity, {
+      foreignKey: 'bot_id',
+      as: 'contactIdentities',
     });
   }
 }

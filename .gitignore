@@ -69,6 +69,7 @@ web_modules/
 .env
 .env.*
 !.env.example
+.env.test
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -110,6 +111,8 @@ dist
 # Serverless directories
 .serverless/
 
+.scripts
+
 # FuseBox cache
 .fusebox/
 
@@ -141,3 +144,5 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/J
+
+.uploads

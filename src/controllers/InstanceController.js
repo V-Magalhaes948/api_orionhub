@@ -1,10 +1,17 @@
-import Instance from '../models/Instance.js';
-import { handleError } from '../utils/handleError.js';
 import axios from 'axios';
+import { randomUUID } from 'crypto';
+
+import Instance from '../models/Instance.js';
+import Bot from '../models/Bot.js';
+import { handleError } from '../utils/handleError.js';
+import { invalidateCache } from '../middlewares/cache.js';
+import { slugify } from '../utils/slugify.js';
+import { logActivity } from '../utils/logActivity.js';
 
 const INSTANCE_ATTRIBUTES = [
   'id',
   'user_id',
+  'name',
   'instance_id',
   'instance_token',
   'phone_number',
@@ -39,15 +46,12 @@ class InstanceController {
 
   async store(req, res) {
     try {
-      const { instance_id } = req.body;
+      const { name } = req.body;
+
+      const instance_id = `${slugify(name)}-${randomUUID().slice(0, 8)}`;
+
       const evolutionClient = this.#getEvolutionClient();
 
-      const existing = await Instance.findOne({ where: { instance_id } });
-      if (existing) {
-        return res.status(409).json({ message: 'Instance already exists' });
-      }
-
-      // 1. Cria a instância na Evolution API
       const { data: evolutionData } = await evolutionClient.post(
         '/instance/create',
         {
@@ -58,28 +62,38 @@ class InstanceController {
 
       const instance_token = evolutionData.hash;
 
-      // 2. Registra o webhook na Evolution
       await evolutionClient.post(`/webhook/set/${instance_id}`, {
         webhook: {
           enabled: true,
-          url: `${process.env.APP_URL}/webhook`,
+          url: `${process.env.APP_URL}/webhook?secret=${process.env.WEBHOOK_SECRET}`,
           webhookByEvents: false,
           webhookBase64: false,
           events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
         },
       });
 
-      // 3. Salva no banco
       const instance = await Instance.create({
         user_id: req.userId,
+        name,
         instance_id,
         instance_token,
-        status: 'pending',
+        status: 'disconnected',
       });
+
+      await logActivity({
+        userId: req.userId,
+        action: 'instance.created',
+        resourceType: 'instance',
+        resourceId: instance.id,
+        metadata: { name: instance.name },
+        ip: req.ip,
+      });
+
+      await invalidateCache(req.userId, ['/instances']);
 
       return res.status(201).json({
         message: 'Instance created successfully',
-        instance,
+        instanceId: instance.id,
       });
     } catch (error) {
       return handleError(res, error);
@@ -133,6 +147,8 @@ class InstanceController {
 
       await instance.update({ status: newStatus });
 
+      await invalidateCache(req.userId, ['/instances']);
+
       return res.status(200).json({
         status: instance.status,
         phone_number: instance.phone_number,
@@ -154,12 +170,46 @@ class InstanceController {
         return res.status(404).json({ message: 'Instance not found' });
       }
 
-      // Remove da Evolution antes de deletar do banco
-      await evolutionClient.delete(`/instance/delete/${instance.instance_id}`);
+      const botExist = await Bot.findOne({
+        where: { instance_id: instance.id, user_id: req.userId },
+      });
+
+      if (botExist) {
+        return res.status(409).json({
+          message: 'Instance has a bot connected, cannot delete the instance.',
+        });
+      }
+
+      try {
+        await evolutionClient.delete(
+          `/instance/delete/${instance.instance_id}`
+        );
+      } catch (err) {
+        console.warn(
+          `[InstanceController] Falha ao remover instância ${instance.instance_id} na Evolution API (prosseguindo com a exclusão local):`,
+          err.response?.data || err.message
+        );
+      }
 
       await instance.destroy();
 
-      return res.status(200).json({ message: 'Instance deleted successfully' });
+      await logActivity({
+        userId: req.userId,
+        action: 'instance.deleted',
+        resourceType: 'instance',
+        resourceId: instance.id,
+        metadata: { name: instance.name },
+        ip: req.ip,
+      });
+
+      await invalidateCache(req.userId, ['/instances']);
+
+      return res
+        .status(200)
+        .json({
+          message: 'Instance deleted successfully',
+          instanceId: instance.id,
+        });
     } catch (error) {
       return handleError(res, error);
     }

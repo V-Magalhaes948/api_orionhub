@@ -1,9 +1,16 @@
 import { Router } from 'express';
-import WebhookController from '../controllers/WebhookController';
+import WebhookController from '../controllers/WebhookController.js';
+import { validate } from '../middlewares/validateJson.js';
+import { webhookEventSchema } from '../schemas/webhookSchemas.js';
+import { verifyWebhookSecret } from '../middlewares/verifyWebhookSecret.js';
 
 const router = Router();
 
-router.get('/', (req, res) => res.status(200).send('OK'));
-router.post('/', WebhookController.handle);
+router.post(
+  '/',
+  verifyWebhookSecret,
+  validate(webhookEventSchema),
+  WebhookController.handle
+);
 
 export default router;

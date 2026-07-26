@@ -1,8 +1,8 @@
-import GeminiService from '../../services/GeminiService.js';
+import GroqService from '../../services/groqService.js';
 import Message from '../../models/Message.js';
+import MessageService from '../../services/messageService.js';
 
 export default async function aiHandler(bot, conversation, userMessage) {
-  // busca últimas 10 mensagens pra contexto
   const history = await Message.findAll({
     where: { conversation_id: conversation.id },
     attributes: ['role', 'content'],
@@ -10,17 +10,19 @@ export default async function aiHandler(bot, conversation, userMessage) {
     limit: 10,
   });
 
-  const reply = await GeminiService.generateReply(
+  const historyWithoutCurrent = history.slice(0, -1);
+
+  const reply = await GroqService.generateReply(
     bot.system_prompt,
     userMessage,
-    history
+    historyWithoutCurrent
   );
 
-  await Message.create({
-    conversation_id: conversation.id,
+  const savedMessage = await MessageService.saveAndEmit({
+    conversationId: conversation.id,
     content: reply,
     role: 'assistant',
   });
 
-  return reply;
+  return { reply, savedMessage };
 }

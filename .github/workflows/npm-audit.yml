@@ -1,0 +1,29 @@
+name: npm audit
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # toda segunda, 09:00 UTC (06:00 no horário de Brasília)
+  push:
+    branches: [main]
+    paths:
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch: {} # permite rodar manualmente pelo GitHub também
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instalar dependências (exatas do lockfile)
+        run: npm ci
+
+      - name: Rodar npm audit (produção, falha em high/critical)
+        run: npm audit --omit=dev --audit-level=high

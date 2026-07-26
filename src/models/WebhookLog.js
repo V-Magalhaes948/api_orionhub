@@ -31,7 +31,6 @@ export default class WebhookLog extends Model {
         sequelize,
       }
     );
-
     return this;
   }
 }

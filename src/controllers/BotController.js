@@ -1,6 +1,8 @@
 import Bot from '../models/Bot.js';
 import Instance from '../models/Instance.js';
 import { handleError } from '../utils/handleError.js';
+import { invalidateCache } from '../middlewares/cache.js';
+import { logActivity } from '../utils/logActivity.js';
 
 const BOT_ATTRIBUTES = [
   'id',
@@ -33,7 +35,7 @@ class BotController {
       const { name, system_prompt, instance_id, mode } = req.body;
 
       const instance = await Instance.findOne({
-        where: { id: instance_id, status: 'connected' },
+        where: { id: instance_id, status: 'connected', user_id: req.userId },
       });
 
       if (!instance) {
@@ -54,10 +56,23 @@ class BotController {
         name,
         system_prompt,
         instance_id,
-        mode: mode || 'manual',
+        mode,
       });
 
-      return res.status(201).json({ message: 'Bot created successfully', bot });
+      await logActivity({
+        userId: req.userId,
+        action: 'bot.created',
+        resourceType: 'bot',
+        resourceId: bot.id,
+        metadata: { name: bot.name, mode: bot.mode },
+        ip: req.ip,
+      });
+
+      await invalidateCache(req.userId, ['/bots']);
+
+      return res
+        .status(201)
+        .json({ message: 'Bot created successfully', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -94,7 +109,21 @@ class BotController {
       }
 
       await bot.update({ name, system_prompt, mode });
-      return res.status(200).json({ message: 'Bot updated successfully', bot });
+
+      await logActivity({
+        userId: req.userId,
+        action: 'bot.updated',
+        resourceType: 'bot',
+        resourceId: bot.id,
+        metadata: { name: bot.name },
+        ip: req.ip,
+      });
+
+      await invalidateCache(req.userId, ['/bots']);
+
+      return res
+        .status(200)
+        .json({ message: 'Bot updated successfully', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -110,8 +139,22 @@ class BotController {
         return res.status(404).json({ message: 'Bot not found' });
       }
 
-      await bot.update({ active: false });
-      return res.status(200).json({ message: 'Bot deleted successfully' });
+      await bot.destroy();
+
+      await logActivity({
+        userId: req.userId,
+        action: 'bot.deleted',
+        resourceType: 'bot',
+        resourceId: bot.id,
+        metadata: { name: bot.name },
+        ip: req.ip,
+      });
+
+      await invalidateCache(req.userId, ['/bots']);
+
+      return res
+        .status(200)
+        .json({ message: 'Bot deleted successfully', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }

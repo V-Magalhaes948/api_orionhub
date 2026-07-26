@@ -1,4 +1,5 @@
 import Instance from '../../models/Instance.js';
+import { io } from '../../server.js';
 
 export default async function connectionHandler({
   event,
@@ -23,5 +24,12 @@ export default async function connectionHandler({
 
   if (data?.state === 'close' || data?.state === 'refused') {
     await instance.update({ status: 'disconnected' });
+
+    io.to(`user:${instance.user_id}`).emit('notification', {
+      type: 'instance_disconnected',
+      title: 'Instância desconectada',
+      message: `A instância "${instance.instance_id}" foi desconectada.`,
+      at: new Date().toISOString(),
+    });
   }
 }

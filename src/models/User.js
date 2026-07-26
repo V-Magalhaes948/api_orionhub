@@ -11,7 +11,19 @@ export default class User extends Model {
           primaryKey: true,
           allowNull: false,
         },
-        nome: {
+        plan_id: {
+          type: Sequelize.UUID,
+          allowNull: true,
+        },
+        addon_id: {
+          type: Sequelize.UUID,
+          allowNull: true,
+        },
+        is_admin: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+        },
+        name: {
           type: Sequelize.STRING,
           defaultValue: '',
           validate: {
@@ -33,9 +45,67 @@ export default class User extends Model {
             },
           },
         },
-        active: {
+        refresh_token: {
+          type: Sequelize.STRING(512),
+          allowNull: true,
+        },
+        messages_this_month: {
+          type: Sequelize.INTEGER,
+          defaultValue: 0,
+        },
+        messages_reset_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        last_login_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        suspended_reason: {
+          type: Sequelize.STRING,
+          allowNull: true,
+        },
+        plan_status: {
+          type: Sequelize.ENUM('active', 'expired', 'pending', 'trialing'),
+          defaultValue: 'pending',
+        },
+        plan_expires_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        account_status: {
+          type: Sequelize.ENUM('active', 'suspended', 'deleted'),
+          allowNull: false,
+          defaultValue: 'active',
+        },
+        reset_token_hash: {
+          type: Sequelize.STRING,
+          allowNull: true,
+        },
+        reset_token_expires_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        addon_status: {
+          type: Sequelize.ENUM('active', 'expired'),
+          allowNull: true,
+        },
+        addon_expires_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        product_selection_pending: {
           type: Sequelize.BOOLEAN,
-          defaultValue: true,
+          allowNull: false,
+          defaultValue: false,
+        },
+        failed_login_attempts: {
+          type: Sequelize.INTEGER,
+          defaultValue: 0,
+        },
+        locked_until: {
+          type: Sequelize.DATE,
+          allowNull: true,
         },
         password_hash: {
           type: Sequelize.STRING,
@@ -45,21 +115,23 @@ export default class User extends Model {
           type: Sequelize.VIRTUAL,
           defaultValue: '',
           validate: {
-            len: {
-              args: [6, 50],
-              msg: 'A senha precisa ter entre 6 a 50 caracteres.',
+            passwordLength(value) {
+              if (value && (value.length < 6 || value.length > 50)) {
+                throw new Error('A senha precisa ter entre 6 a 50 caracteres.');
+              }
             },
           },
         },
       },
       {
         sequelize,
+        tableName: 'users',
       }
     );
 
     this.addHook('beforeSave', async (user) => {
       if (user.password) {
-        user.password_hash = await bcrypt.hash(user.password, 10);
+        user.password_hash = await bcrypt.hash(user.password, 12);
       }
     });
 
@@ -72,5 +144,19 @@ export default class User extends Model {
 
   static associate(models) {
     this.hasMany(models.Bot, { foreignKey: 'user_id', as: 'bots' });
+    this.hasMany(models.Product, { foreignKey: 'user_id', as: 'products' });
+    this.hasMany(models.AdminAuditLog, {
+      foreignKey: 'admin_id',
+      as: 'actionsPerformed',
+    });
+    this.hasMany(models.AdminAuditLog, {
+      foreignKey: 'target_user_id',
+      as: 'actionsReceived',
+    });
+    this.belongsTo(models.Plan, { foreignKey: 'plan_id', as: 'plan' });
+    this.belongsTo(models.AddonPackage, {
+      foreignKey: 'addon_id',
+      as: 'addon',
+    });
   }
 }

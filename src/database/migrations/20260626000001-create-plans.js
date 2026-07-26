@@ -2,33 +2,36 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('instances', {
+    await queryInterface.createTable('plans', {
       id: {
         type: Sequelize.UUID,
         defaultValue: Sequelize.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
-      user_id: {
-        type: Sequelize.UUID,
-        allowNull: false,
-      },
-      instance_id: {
-        type: Sequelize.STRING,
-        allowNull: false,
-        unique: true,
-      },
-      instance_token: {
+      name: {
         type: Sequelize.STRING,
         allowNull: false,
       },
-      phone_number: {
-        type: Sequelize.STRING,
-        allowNull: true,
+      is_default: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
-      status: {
-        type: Sequelize.ENUM('connected', 'disconnected', 'pending'),
-        defaultValue: 'pending',
+      max_instances: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      max_products: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      max_messages_per_month: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+      },
+      price: {
+        type: Sequelize.DECIMAL(10, 2),
         allowNull: false,
       },
       created_at: {
@@ -43,6 +46,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.dropTable('instances');
+    await queryInterface.dropTable('plans');
   },
 };

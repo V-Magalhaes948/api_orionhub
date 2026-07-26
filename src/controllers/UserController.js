@@ -1,27 +1,39 @@
 import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
+import Plan from '../models/Plan.js';
+import { invalidateCache } from '../middlewares/cache.js';
+import AddonPackage from '../models/AddonPackage.js';
 import { handleError } from '../utils/handleError.js';
+import { logActivity } from '../utils/logActivity.js';
 
-const USER_ATTRIBUTES = ['id', 'nome', 'email', 'created_at', 'updated_at'];
+const USER_ATTRIBUTES = [
+  'id',
+  'name',
+  'email',
+  'plan_id',
+  'plan_status',
+  'plan_expires_at',
+  'addon_id',
+  'addon_status',
+  'addon_expires_at',
+  'product_selection_pending',
+  'is_admin',
+  'account_status',
+  'messages_this_month',
+  'created_at',
+  'updated_at',
+];
 
 class UserController {
-  async index(req, res) {
-    try {
-      const users = await User.findAll({
-        where: { active: true },
-        attributes: USER_ATTRIBUTES,
-      });
-      return res.status(200).json(users);
-    } catch (error) {
-      return handleError(res, error);
-    }
-  }
-
   async show(req, res) {
     try {
       const user = await User.findByPk(req.userId, {
         attributes: USER_ATTRIBUTES,
+        include: [
+          { model: Plan, as: 'plan' },
+          { model: AddonPackage, as: 'addon' },
+        ],
       });
 
       if (!user) {
@@ -35,14 +47,25 @@ class UserController {
 
   async update(req, res) {
     try {
-      const { nome, email, password } = req.body;
+      const { name, email, password } = req.body;
       const user = await User.findByPk(req.userId);
 
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      await user.update({ nome, email, password });
+      await user.update({ name, email, password });
+
+      await invalidateCache(req.userId, ['/users']);
+
+      await logActivity({
+        userId: req.userId,
+        action: 'user.updated',
+        resourceType: 'user',
+        resourceId: user.id,
+        metadata: { name: user.name },
+        ip: req.ip,
+      });
 
       if (password) {
         const token = jwt.sign({ id: user.id }, process.env.TOKEN_SECRET, {
@@ -52,9 +75,10 @@ class UserController {
           .status(200)
           .json({ message: 'User updated successfully', token });
       }
+
       return res
         .status(200)
-        .json({ message: 'User updated successfully', user });
+        .json({ message: 'User updated successfully', userId: user.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -68,8 +92,21 @@ class UserController {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      await user.update({ active: false });
-      return res.status(200).json({ message: 'User deleted successfully' });
+      await user.update({ account_status: 'deleted' });
+
+      await logActivity({
+        userId: req.userId,
+        action: 'user.deleted',
+        resourceType: 'user',
+        resourceId: user.id,
+        metadata: { name: user.name },
+        ip: req.ip,
+      });
+
+      return res.status(200).json({
+        message: 'User deleted successfully',
+        userId: user.id,
+      });
     } catch (error) {
       return handleError(res, error);
     }

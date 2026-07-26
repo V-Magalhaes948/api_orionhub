@@ -14,6 +14,10 @@ export default class Instance extends Model {
           type: Sequelize.UUID,
           allowNull: false,
         },
+        name: {
+          type: Sequelize.STRING,
+          allowNull: true,
+        },
         instance_id: {
           type: Sequelize.STRING,
           allowNull: false,
