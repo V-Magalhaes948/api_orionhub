@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.production
+.env.test
+.git
+npm-debug.log
+
