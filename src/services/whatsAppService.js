@@ -52,6 +52,15 @@ class WhatsAppService {
       throw new Error(`Erro ao enviar documento: ${error.message}`);
     }
   }
+
+  async getConnectionState(instance) {
+    const { baseURL, headers } = this.#getClient(instance);
+    const response = await axios.get(
+      `${baseURL}/instance/connectionState/${instance.instance_id}`,
+      { headers }
+    );
+    return response.data;
+  }
 }
 
 export default new WhatsAppService();

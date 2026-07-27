@@ -4,11 +4,11 @@ import { Queue, Worker } from 'bullmq';
 import redis from '../queues/redis.js';
 import Instance from '../models/Instance.js';
 import SocketService from '../services/socketService.js';
-import { getClient } from '../services/whatsAppService.js'; // ajuste pro seu setup real
+import whatsAppService from '../services/whatsAppService.js';
 
 const QUEUE_NAME = 'instance-status-sweep';
-const SWEEP_INTERVAL_MS = 5 * 60 * 1000; // conexão de WhatsApp cai rápido, 5min é mais seguro que 15min
-const CONCURRENCY_LIMIT = 8; // evita bombardear a Evolution API se você tiver muitas instâncias
+const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
+const CONCURRENCY_LIMIT = 8;
 
 export const instanceStatusQueue = new Queue(QUEUE_NAME, {
   connection: redis,
@@ -25,11 +25,9 @@ export function scheduleInstanceStatusSweep() {
   );
 }
 
-async function checkInstance(instance, evolutionClient) {
+async function checkInstance(instance) {
   try {
-    const { data } = await evolutionClient.get(
-      `/instance/connectionState/${instance.instance_id}`
-    );
+    const data = await whatsAppService.getConnectionState(instance);
 
     const state = data?.instance?.state;
     const newStatus = state === 'open' ? 'connected' : 'disconnected';
@@ -84,8 +82,6 @@ async function runWithConcurrency(items, limit, task) {
 export const instanceStatusWorker = new Worker(
   QUEUE_NAME,
   async () => {
-    const evolutionClient = getEvolutionClient();
-
     const instances = await Instance.findAll({
       where: { status: { [Op.in]: ['connected', 'disconnected'] } },
     });
@@ -93,7 +89,7 @@ export const instanceStatusWorker = new Worker(
     const results = await runWithConcurrency(
       instances,
       CONCURRENCY_LIMIT,
-      (instance) => checkInstance(instance, evolutionClient)
+      (instance) => checkInstance(instance)
     );
 
     return {

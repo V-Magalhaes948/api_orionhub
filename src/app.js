@@ -1,11 +1,10 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import express from 'express';
 import { resolve } from 'path';
 import cors from 'cors';
 import { corsOptions } from './config/cors.js';
 import { helmetConfig } from './config/helmet.js';
 import { globalRateLimit } from './middlewares/rateLimit.js';
-dotenv.config();
 
 import './database';
 import routes from './routes';
