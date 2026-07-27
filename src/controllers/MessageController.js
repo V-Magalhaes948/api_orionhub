@@ -51,6 +51,12 @@ class MessageController {
       const { conversationId } = req.params;
       const { content } = req.body;
 
+      if (!content || !content.trim()) {
+        return res
+          .status(400)
+          .json({ message: 'O conteúdo da mensagem é obrigatório.' });
+      }
+
       const conversation = await Conversation.findOne({
         where: { id: conversationId, status: 'open' },
         include: [
@@ -72,13 +78,11 @@ class MessageController {
       const destination = conversation.contact_phone;
       const instance = conversation.bot.instance;
 
-      if (instance.status != 1) {
+      if (instance.status !== 'connected') {
         return res
-          .status(404)
+          .status(422)
           .json({ message: 'O número da instância está desconectado.' });
       }
-
-      //Emitir um socket.io aqui para gerar uma notificação também avisando-o.
 
       if (destination.endsWith('@lid')) {
         return res.status(422).json({
@@ -99,13 +103,19 @@ class MessageController {
         });
       }
 
+      try {
+        await WhatsAppService.sendText(instance, destination, content);
+      } catch (sendError) {
+        return res.status(502).json({
+          message: 'Falha ao enviar mensagem via WhatsApp. Tente novamente.',
+        });
+      }
+
       const message = await MessageService.saveAndEmit({
         conversationId,
         content,
         role: 'assistant',
       });
-
-      await WhatsAppService.sendText(instance, destination, content);
 
       return res.status(201).json(message);
     } catch (error) {

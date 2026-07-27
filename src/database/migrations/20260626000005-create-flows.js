@@ -10,6 +10,11 @@ module.exports = {
         primaryKey: true,
         allowNull: false,
       },
+      test_count: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
