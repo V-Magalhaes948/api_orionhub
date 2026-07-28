@@ -19,6 +19,15 @@ export default async function connectionHandler({
       status: 'connected',
       phone_number: data.wuid?.replace('@s.whatsapp.net', '') ?? null,
     });
+
+    io.to(`user:${instance.user_id}`).emit('notification', {
+      type: 'instance_reconnected',
+      instanceId: instance.id,
+      instanceName: instance.name,
+      title: 'Instância reconectada',
+      message: `A instância "${instance.name}" foi reconectada.`,
+      at: new Date().toISOString(),
+    });
     return;
   }
 
@@ -27,8 +36,10 @@ export default async function connectionHandler({
 
     io.to(`user:${instance.user_id}`).emit('notification', {
       type: 'instance_disconnected',
+      instanceId: instance.id,
+      instanceName: instance.name,
       title: 'Instância desconectada',
-      message: `A instância "${instance.instance_id}" foi desconectada.`,
+      message: `A instância "${instance.name}" foi desconectada.`,
       at: new Date().toISOString(),
     });
   }
