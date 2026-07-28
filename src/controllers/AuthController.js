@@ -36,9 +36,6 @@ class AuthController {
         messages_reset_at: null,
       });
 
-      // CRÍTICO: nunca serializar a instância inteira — toJSON() incluiria
-      // password_hash e refresh_token. Exclui explicitamente antes de
-      // devolver.
       const { password_hash, refresh_token, ...safeUser } = newUser.toJSON();
 
       return res.status(201).json({

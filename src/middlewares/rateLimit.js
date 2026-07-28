@@ -41,8 +41,9 @@ export const forgotPasswordRateLimit = buildRateLimit({
 
 export const globalRateLimit = buildRateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 300,
-  standardHeaders: true,
+  max: 1500,
+  standardHeaders: false,
   legacyHeaders: false,
+  skip: (req) => req.path === '/health',
   message: { message: 'Muitas requisições. Tente novamente mais tarde.' },
 });
