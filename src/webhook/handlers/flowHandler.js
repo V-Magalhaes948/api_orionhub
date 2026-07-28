@@ -12,7 +12,7 @@ import Flow from '../../models/Flow.js';
 import Message from '../../models/Message.js';
 
 import redis from '../../queues/redis.js';
-import { invalidateCache } from '../../middlewares/cacheMiddleware.js';
+import { invalidateCache } from '../../middlewares/cache.js';
 
 import { getCatalogText } from '../../services/promptBuilder.js';
 import messageDeliveryService from '../../services/messageDeliveryService.js';
