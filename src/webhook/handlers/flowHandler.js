@@ -12,6 +12,7 @@ import Flow from '../../models/Flow.js';
 import Message from '../../models/Message.js';
 
 import redis from '../../queues/redis.js';
+import { invalidateCache } from '../../middlewares/cacheMiddleware.js';
 
 import { getCatalogText } from '../../services/promptBuilder.js';
 import messageDeliveryService from '../../services/messageDeliveryService.js';
@@ -131,7 +132,7 @@ async function fetchStepHistory(conversationId) {
   });
 }
 
-async function closeFlowAndConversation(session, conversation) {
+async function closeFlowAndConversation(session, conversation, userId) {
   await session.update({ completed: true, current_step_id: null });
 
   try {
@@ -220,31 +221,31 @@ export async function flowHandler(
       role: 'assistant',
     });
 
-    await invalidateCache(bot.user_id, [
-      '/conversations',
-      `/conversations/${conversation.id}/messages`,
-    ]);
+    try {
+      await invalidateCache(bot.user_id, [
+        '/conversations',
+        `/conversations/${conversation.id}/messages`,
+      ]);
+    } catch (err) {
+      console.error('[FlowHandler] Erro ao invalidar cache:', err.message);
+    }
 
     try {
-      const result = await messageDeliveryService.safeSendText(
-        instance,
-        phone,
-        reply
-      );
+      await messageDeliveryService.safeSendText(instance, phone, reply);
     } catch (err) {
       console.error('[FlowHandler] Erro ao enviar WhatsApp:', err.message);
     }
 
     if (step_completed) {
       if (step.closes_conversation) {
-        await closeFlowAndConversation(session, conversation);
+        await closeFlowAndConversation(session, conversation, bot.user_id);
       } else if (nextStep) {
         await session.update({ current_step_id: nextStep.id });
       } else {
         console.warn(
           `[FlowHandler] Etapa "${step.content.substring(0, 50)}..." concluída sem closes_conversation marcado e sem próxima etapa cadastrada — encerrando por padrão.`
         );
-        await closeFlowAndConversation(session, conversation);
+        await closeFlowAndConversation(session, conversation, bot.user_id);
       }
     }
 

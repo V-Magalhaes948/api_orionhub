@@ -1,3 +1,5 @@
+import { Op } from 'sequelize';
+
 import Bot from '../models/Bot.js';
 import Flow from '../models/Flow.js';
 
@@ -32,11 +34,8 @@ class FlowStepTestController {
 
       const flow = await Flow.findByPk(bot.flow_id);
 
-      if (flow.test_count >= 5) {
-        return res.status(429).json({
-          message: 'Limite de 5 testes por fluxo atingido',
-          test_count: flow.test_count,
-        });
+      if (!flow) {
+        return res.status(404).json({ message: 'Flow not found' });
       }
 
       const fakeStep = { content, completion_criteria, closes_conversation };
@@ -45,7 +44,7 @@ class FlowStepTestController {
         : null;
 
       const historyWithCurrentMessage = [
-        ...history,
+        ...(history ?? []),
         { role: 'user', content: user_message },
       ];
 
@@ -57,7 +56,17 @@ class FlowStepTestController {
         historyWithCurrentMessage
       );
 
-      await flow.increment('test_count');
+      const [affectedRows] = await Flow.increment('test_count', {
+        where: { id: flow.id, test_count: { [Op.lt]: 5 } },
+      });
+
+      if (affectedRows === 0) {
+        return res.status(429).json({
+          message: 'Limite de 5 testes por fluxo atingido',
+          test_count: 5,
+        });
+      }
+
       await flow.reload();
 
       return res.status(200).json({ ...result, test_count: flow.test_count });

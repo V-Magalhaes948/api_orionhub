@@ -28,11 +28,11 @@ export function scheduleInstanceStatusSweep() {
 async function checkInstance(instance) {
   try {
     const data = await whatsAppService.getConnectionState(instance);
-
     const state = data?.instance?.state;
     const newStatus = state === 'open' ? 'connected' : 'disconnected';
+    const didChange = newStatus !== instance.status;
 
-    if (newStatus !== instance.status) {
+    if (didChange) {
       await instance.update({ status: newStatus });
 
       if (newStatus === 'disconnected') {
@@ -54,13 +54,13 @@ async function checkInstance(instance) {
       }
     }
 
-    return { id: instance.id, status: newStatus };
+    return { id: instance.id, status: newStatus, changed: didChange };
   } catch (err) {
     console.error(
       `[InstanceStatusSweep] Falha ao checar instância ${instance.id}:`,
       err.message
     );
-    return { id: instance.id, status: 'error' };
+    return { id: instance.id, status: 'error', changed: false };
   }
 }
 
@@ -94,7 +94,7 @@ export const instanceStatusWorker = new Worker(
 
     return {
       total: instances.length,
-      changed: results.filter((r) => r.status !== 'error').length,
+      changed: results.filter((r) => r.changed).length,
     };
   },
   { connection: redis, concurrency: 1 }
