@@ -21,9 +21,13 @@ const SECRET = process.env.WEBHOOK_SECRET;
 
 function validPayload(overrides = {}) {
   return {
-    event: 'message.received',
+    event: 'messages.upsert',
     instance: 'instancia-1',
-    data: { from: '5511999999999', text: 'Olá' },
+    data: {
+      key: { id: 'wamid.default123' },
+      from: '5511999999999',
+      text: 'Olá',
+    },
     ...overrides,
   };
 }
@@ -109,7 +113,7 @@ describe('Webhook — POST /webhook — validação do body', () => {
 
 describe('Webhook — POST /webhook — processamento', () => {
   it('responde 200 "EVENT_RECEIVED" e enfileira o job com o evento e o body inteiro', async () => {
-    const payload = validPayload({ event: 'message.received' });
+    const payload = validPayload({ event: 'messages.upsert' });
 
     const res = await request(app)
       .post('/webhook')
@@ -121,20 +125,72 @@ describe('Webhook — POST /webhook — processamento', () => {
 
     expect(webhookQueue.add).toHaveBeenCalledTimes(1);
     const [jobName, jobData, jobOptions] = webhookQueue.add.mock.calls[0];
-    expect(jobName).toBe('message.received');
+    expect(jobName).toBe('messages.upsert');
     expect(jobData).toEqual(payload);
-    expect(jobOptions.jobId).toMatch(/^message\.received-/);
+    expect(jobOptions.jobId).toMatch(/^messages\.upsert-/);
   });
 
-  it('gera um jobId único por requisição, mesmo para o mesmo evento', async () => {
-    const payload = validPayload({ event: 'message.received' });
+  it('gera jobId determinístico pra messages.upsert com base em instance + message_id', async () => {
+    const payload = {
+      event: 'messages.upsert',
+      instance: 'instancia-1',
+      data: { key: { id: 'wamid.ABC123' } },
+    };
+
+    const res = await request(app)
+      .post('/webhook')
+      .query({ secret: SECRET })
+      .send(payload);
+
+    expect(res.status).toBe(200);
+    const [, , jobOptions] = webhookQueue.add.mock.calls[0];
+    expect(jobOptions.jobId).toBe('messages.upsert-instancia-1-wamid.ABC123');
+  });
+
+  it('dois payloads idênticos de messages.upsert geram o MESMO jobId (dedup na origem)', async () => {
+    const payload = {
+      event: 'messages.upsert',
+      instance: 'instancia-1',
+      data: { key: { id: 'wamid.ABC123' } },
+    };
 
     await request(app).post('/webhook').query({ secret: SECRET }).send(payload);
     await request(app).post('/webhook').query({ secret: SECRET }).send(payload);
 
-    const [, , firstOptions] = webhookQueue.add.mock.calls[0];
-    const [, , secondOptions] = webhookQueue.add.mock.calls[1];
-    expect(firstOptions.jobId).not.toBe(secondOptions.jobId);
+    const jobId1 = webhookQueue.add.mock.calls[0][2].jobId;
+    const jobId2 = webhookQueue.add.mock.calls[1][2].jobId;
+    expect(jobId1).toBe(jobId2);
+  });
+
+  it('connection.update continua gerando jobId único por chamada (não tem message_id pra deduplicar)', async () => {
+    const payload = {
+      event: 'connection.update',
+      instance: 'instancia-1',
+      data: { state: 'open' },
+    };
+
+    await request(app).post('/webhook').query({ secret: SECRET }).send(payload);
+    await request(app).post('/webhook').query({ secret: SECRET }).send(payload);
+
+    const jobId1 = webhookQueue.add.mock.calls[0][2].jobId;
+    const jobId2 = webhookQueue.add.mock.calls[1][2].jobId;
+    expect(jobId1).not.toBe(jobId2);
+  });
+
+  it('messages.upsert sem key.id (ex: mensagem de sistema) não deduplica — jobId único por chamada', async () => {
+    const payload = {
+      event: 'messages.upsert',
+      instance: 'instancia-1',
+      data: {},
+    };
+
+    const res = await request(app)
+      .post('/webhook')
+      .query({ secret: SECRET })
+      .send(payload);
+
+    const jobId = webhookQueue.add.mock.calls[0][2].jobId;
+    expect(jobId).toMatch(/^messages\.upsert-[0-9a-f-]{36}$/);
   });
 
   it(

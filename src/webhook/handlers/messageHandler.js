@@ -241,6 +241,11 @@ export default async function messageHandler(webhookPayload) {
     await conversation.update({ contact_name: senderName });
   }
 
+  // console.log('[DEBUG] chegou no saveAndEmit', {
+  //   conversationId: conversation.id,
+  //   messageId,
+  // });
+
   await MessageService.saveAndEmit({
     conversationId: conversation.id,
     content: text,
