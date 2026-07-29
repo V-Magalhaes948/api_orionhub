@@ -11,7 +11,7 @@ const router = Router();
 router.get('/', cacheMiddleware(120), BotController.index);
 router.post('/', validate(createBotSchema), BotController.store);
 router.get('/:id', validate({ params: uuidParam() }), BotController.show);
-router.patch('/:id', validate(updateBotSchema), BotController.update);
+router.put('/:id', validate(updateBotSchema), BotController.update);
 router.delete('/:id', validate({ params: uuidParam() }), BotController.destroy);
 
 export default router;
