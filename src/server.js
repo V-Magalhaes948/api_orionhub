@@ -21,7 +21,7 @@ export const io = new Server(httpServer, {
   },
 });
 
-io.adapter(createSocketRedisAdapter());
+// io.adapter(createSocketRedisAdapter());
 
 io.use((socket, next) => {
   try {
