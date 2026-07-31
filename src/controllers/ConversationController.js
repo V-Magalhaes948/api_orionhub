@@ -4,6 +4,7 @@ import FlowSession from '../models/FlowSession.js';
 import { handleError } from '../utils/handleError.js';
 import { invalidateCache } from '../middlewares/cache.js';
 import { logActivity } from '../utils/logActivity.js';
+import SocketService from '../services/socketService.js';
 
 const CONVERSATION_ATTRIBUTES = [
   'id',
@@ -71,6 +72,57 @@ class ConversationController {
       }
 
       return res.status(200).json(conversation);
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async resume(req, res) {
+    try {
+      const conversation = await Conversation.findOne({
+        where: { id: req.params.id },
+        include: [{ model: Bot, as: 'bot', where: { user_id: req.userId } }],
+      });
+
+      if (!conversation) {
+        return res.status(404).json({ message: 'Conversa não encontrada.' });
+      }
+
+      if (conversation.status !== 'waiting') {
+        return res.status(409).json({
+          message: 'Esta conversa não está aguardando atendimento humano.',
+        });
+      }
+
+      await conversation.update({ status: 'open' });
+
+      await invalidateCache(req.userId, [
+        '/conversations',
+        `/conversations/${conversation.id}/messages`,
+      ]);
+
+      SocketService.emitToConversation(
+        conversation.id,
+        'conversation:resumed',
+        {
+          id: conversation.id,
+          status: 'open',
+        }
+      );
+
+      await logActivity({
+        userId: req.userId,
+        action: 'conversation.resumed',
+        resourceType: 'conversation',
+        resourceId: conversation.id,
+        metadata: { bot_id: conversation.bot_id },
+        ip: req.ip,
+      });
+
+      return res.status(200).json({
+        message: 'Bot reativado nesta conversa.',
+        conversationId: conversation.id,
+      });
     } catch (error) {
       return handleError(res, error);
     }

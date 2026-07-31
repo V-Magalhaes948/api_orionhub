@@ -253,6 +253,13 @@ export default async function messageHandler(webhookPayload) {
     messageId,
   });
 
+  if (conversation.status === 'waiting') {
+    console.warn(
+      `[MessageHandler] Conversa ${conversation.id} está aguardando atendimento humano. Mensagem salva, bot em silêncio.`
+    );
+    return;
+  }
+
   if (stillPending) {
     console.warn(
       `[MessageHandler] Contato ${contactIdentity} ainda não resolvido pelo WhatsApp (sem número real disponível). ` +
@@ -284,6 +291,7 @@ export default async function messageHandler(webhookPayload) {
       err.message
     );
   }
+
   if (flowReply) return;
 
   if (bot.mode === 'ai') {

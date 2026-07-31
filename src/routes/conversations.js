@@ -43,5 +43,10 @@ router.post(
   validate(storeMessageSchema),
   MessageController.store
 );
+router.patch(
+  '/:id/resume',
+  validate({ params: uuidParam() }),
+  ConversationController.resume
+);
 
 export default router;

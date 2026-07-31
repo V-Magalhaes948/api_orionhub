@@ -12,7 +12,7 @@ class FlowController {
         where: { id: req.params.botId, user_id: req.userId },
       });
 
-      if (!bot) return res.status(404).json({ message: 'Bot not found' });
+      if (!bot) return res.status(404).json({ message: 'Bot não encontrado.' });
       if (!bot.flow_id) return res.status(200).json(null);
 
       const flow = await Flow.findOne({
@@ -29,17 +29,17 @@ class FlowController {
 
   async store(req, res) {
     try {
-      const { steps } = req.body;
+      const { steps, include_catalog } = req.body;
 
       const bot = await Bot.findOne({
         where: { id: req.params.botId, user_id: req.userId },
       });
 
-      if (!bot) return res.status(404).json({ message: 'Bot not found' });
+      if (!bot) return res.status(404).json({ message: 'Bot não encontrado.' });
       if (bot.flow_id)
-        return res.status(409).json({ message: 'Bot already has a flow' });
+        return res.status(409).json({ message: 'Bot já tem um fluxo.' });
 
-      const flow = await Flow.create();
+      const flow = await Flow.create({ include_catalog: !!include_catalog });
 
       await FlowStep.bulkCreate(
         steps.map((step, index) => ({
@@ -48,7 +48,7 @@ class FlowController {
           content: step.content,
           completion_criteria: step.completion_criteria,
           closes_conversation: step.closes_conversation,
-          include_catalog: step.include_catalog,
+          hands_off_to_human: step.hands_off_to_human,
         }))
       );
 
@@ -65,7 +65,7 @@ class FlowController {
 
       return res
         .status(201)
-        .json({ message: 'Flow created successfully', flow: flow.id });
+        .json({ message: 'Flow criado com sucesso.', flow: flow.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -73,15 +73,20 @@ class FlowController {
 
   async update(req, res) {
     try {
-      const { steps } = req.body;
+      const { steps, include_catalog } = req.body;
 
       const bot = await Bot.findOne({
         where: { id: req.params.botId, user_id: req.userId },
       });
 
-      if (!bot) return res.status(404).json({ message: 'Bot not found' });
+      if (!bot) return res.status(404).json({ message: 'Bot não encontrado.' });
       if (!bot.flow_id)
-        return res.status(404).json({ message: 'Flow not found' });
+        return res.status(404).json({ message: 'Flow não encontrado.' });
+
+      await Flow.update(
+        { include_catalog: !!include_catalog },
+        { where: { id: bot.flow_id } }
+      );
 
       await FlowStep.destroy({ where: { flow_id: bot.flow_id } });
 
@@ -92,7 +97,7 @@ class FlowController {
           content: step.content,
           completion_criteria: step.completion_criteria,
           closes_conversation: step.closes_conversation,
-          include_catalog: step.include_catalog,
+          hands_off_to_human: step.hands_off_to_human,
         }))
       );
 
@@ -107,7 +112,7 @@ class FlowController {
 
       return res
         .status(200)
-        .json({ message: 'Flow updated successfully', flowId: bot.flow_id });
+        .json({ message: 'Flow atualizado com sucesso.', flowId: bot.flow_id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -119,9 +124,9 @@ class FlowController {
         where: { id: req.params.botId, user_id: req.userId },
       });
 
-      if (!bot) return res.status(404).json({ message: 'Bot not found' });
+      if (!bot) return res.status(404).json({ message: 'Bot não encontrado.' });
       if (!bot.flow_id)
-        return res.status(404).json({ message: 'Flow not found' });
+        return res.status(404).json({ message: 'Flow não encontrado.' });
 
       const flowId = bot.flow_id;
 
@@ -139,7 +144,7 @@ class FlowController {
 
       return res
         .status(200)
-        .json({ message: 'Flow deleted successfully', flowId: flowId });
+        .json({ message: 'Flow excluído com sucesso.', flowId: flowId });
     } catch (error) {
       return handleError(res, error);
     }

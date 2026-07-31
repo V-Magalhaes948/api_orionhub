@@ -15,6 +15,11 @@ export default class Flow extends Model {
           allowNull: false,
           defaultValue: 0,
         },
+        include_catalog: {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
       },
       { sequelize }
     );

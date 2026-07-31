@@ -52,6 +52,7 @@ async function getOrCreateSession(conversation, flow) {
 }
 
 export async function executeStep(
+  flow,
   bot,
   step,
   nextStep,
@@ -61,7 +62,7 @@ export async function executeStep(
   const historyWithoutCurrent = history.slice(0, -1);
 
   let catalogInstructions = '';
-  if (step.include_catalog) {
+  if (flow.include_catalog) {
     const catalogText = await getCatalogText(bot.user_id);
     if (catalogText) {
       catalogInstructions =
@@ -152,6 +153,41 @@ async function closeFlowAndConversation(session, conversation, userId) {
   }
 }
 
+async function pauseForHumanHandoff(session, conversation, userId, nextStep) {
+  // Avança o step da sessão (se houver próximo) para que, quando o bot for
+  // retomado manualmente, ele continue do ponto certo do fluxo em vez de
+  // repetir a etapa que acabou de ser concluída.
+  await session.update({
+    current_step_id: nextStep ? nextStep.id : session.current_step_id,
+  });
+
+  try {
+    await conversation.update({ status: 'waiting' });
+
+    await invalidateCache(userId, [
+      '/conversations',
+      `/conversations/${conversation.id}/messages`,
+    ]);
+
+    SocketService.emitToConversation(conversation.id, 'conversation:waiting', {
+      id: conversation.id,
+      status: 'waiting',
+    });
+
+    SocketService.emitNotification(
+      userId,
+      'conversation_pending_human',
+      'Atendimento humano necessário',
+      `A conversa ${conversation.id} está aguardando sua resposta.`
+    );
+  } catch (err) {
+    console.error(
+      '[FlowHandler] Erro ao transferir conversa para atendimento humano:',
+      err.message
+    );
+  }
+}
+
 export async function flowHandler(
   bot,
   conversation,
@@ -204,6 +240,7 @@ export async function flowHandler(
     const history = await fetchStepHistory(conversation.id);
 
     const { reply, step_completed, collected } = await executeStep(
+      flow,
       bot,
       step,
       nextStep,
@@ -239,6 +276,13 @@ export async function flowHandler(
     if (step_completed) {
       if (step.closes_conversation) {
         await closeFlowAndConversation(session, conversation, bot.user_id);
+      } else if (step.hands_off_to_human) {
+        await pauseForHumanHandoff(
+          session,
+          conversation,
+          bot.user_id,
+          nextStep
+        );
       } else if (nextStep) {
         await session.update({ current_step_id: nextStep.id });
       } else {

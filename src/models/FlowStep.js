@@ -31,7 +31,7 @@ export default class FlowStep extends Model {
           allowNull: false,
           defaultValue: false,
         },
-        include_catalog: {
+        hands_off_to_human: {
           type: Sequelize.BOOLEAN,
           allowNull: false,
           defaultValue: false,
