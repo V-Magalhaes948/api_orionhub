@@ -15,8 +15,18 @@ const productBodyBase = {
   unit_label: z.enum(['ml', 'kg', 'cm', 'm', 'un', 'g', 'l']).optional(),
   price: z.coerce.number().min(0).max(10000).optional().nullable(),
   price_per_unit: z.coerce.number().min(0).max(10000).optional().nullable(),
-  stock_quantity: z.coerce.number().min(0).max(999).optional().nullable(),
-  min_sale_quantity: z.coerce.number().min(0).max(999).optional().nullable(),
+  stock_quantity: z.coerce
+    .number()
+    .min(0)
+    .max(999, 'Estoque não pode passar de 999')
+    .optional()
+    .nullable(),
+  min_sale_quantity: z.coerce
+    .number()
+    .min(0)
+    .max(999, 'Venda mínima não pode passar de 999')
+    .optional()
+    .nullable(),
   image_catalog_url: emptyableUrl,
   is_featured: z.boolean().optional(),
   image_vitrine_url: emptyableUrl,
