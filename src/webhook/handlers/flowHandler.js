@@ -2,7 +2,6 @@ import { Op } from 'sequelize';
 import { randomUUID } from 'crypto';
 
 import MessageService from '../../services/messageService.js';
-// import WhatsAppService from '../../services/whatsAppService.js';
 import GroqService from '../../services/groqService.js';
 import SocketService from '../../services/socketService.js';
 

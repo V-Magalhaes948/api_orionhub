@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { Op } from 'sequelize';
 
 import Instance from '../../models/Instance.js';
 import Bot from '../../models/Bot.js';
@@ -108,7 +109,7 @@ async function resolveOrCreateConversation(
       where: {
         bot_id: bot.id,
         contact_phone: resolvedIdentity,
-        status: 'open',
+        status: { [Op.in]: ['open', 'waiting'] },
       },
     });
     let created = false;
@@ -240,11 +241,6 @@ export default async function messageHandler(webhookPayload) {
   if (!created && senderName && conversation.contact_name !== senderName) {
     await conversation.update({ contact_name: senderName });
   }
-
-  // console.log('[DEBUG] chegou no saveAndEmit', {
-  //   conversationId: conversation.id,
-  //   messageId,
-  // });
 
   await MessageService.saveAndEmit({
     conversationId: conversation.id,
