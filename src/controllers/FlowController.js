@@ -1,5 +1,7 @@
 import Flow from '../models/Flow.js';
 import FlowStep from '../models/FlowStep.js';
+import FlowSession from '../models/FlowSession.js';
+import Conversation from '../models/Conversation.js';
 import Bot from '../models/Bot.js';
 
 import { handleError } from '../utils/handleError.js';
@@ -83,6 +85,25 @@ class FlowController {
       if (!bot.flow_id)
         return res.status(404).json({ message: 'Flow não encontrado.' });
 
+      const waitingSession = await FlowSession.findOne({
+        where: { flow_id: bot.flow_id, completed: false },
+        include: [
+          {
+            model: Conversation,
+            as: 'conversation',
+            where: { status: 'waiting' },
+            required: true,
+          },
+        ],
+      });
+
+      if (waitingSession) {
+        return res.status(409).json({
+          message:
+            'Não é possível editar este fluxo agora: há uma ou mais conversas aguardando atendimento humano em alguma etapa dele. Atenda ou encerre essas conversas antes de salvar alterações.',
+        });
+      }
+
       await Flow.update(
         { include_catalog: !!include_catalog },
         { where: { id: bot.flow_id } }
@@ -129,6 +150,25 @@ class FlowController {
         return res.status(404).json({ message: 'Flow não encontrado.' });
 
       const flowId = bot.flow_id;
+
+      const waitingSession = await FlowSession.findOne({
+        where: { flow_id: flowId, completed: false },
+        include: [
+          {
+            model: Conversation,
+            as: 'conversation',
+            where: { status: 'waiting' },
+            required: true,
+          },
+        ],
+      });
+
+      if (waitingSession) {
+        return res.status(409).json({
+          message:
+            'Não é possível remover este fluxo agora: há uma ou mais conversas aguardando atendimento humano em alguma etapa dele. Atenda ou encerre essas conversas antes de remover o fluxo.',
+        });
+      }
 
       await bot.update({ flow_id: null });
       await Flow.destroy({ where: { id: flowId } });
