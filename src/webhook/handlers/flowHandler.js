@@ -274,15 +274,15 @@ export async function flowHandler(
     }
 
     if (step_completed) {
-      if (step.closes_conversation) {
-        await closeFlowAndConversation(session, conversation, bot.user_id);
-      } else if (step.hands_off_to_human) {
+      if (step.hands_off_to_human) {
         await pauseForHumanHandoff(
           session,
           conversation,
           bot.user_id,
           nextStep
         );
+      } else if (step.closes_conversation) {
+        await closeFlowAndConversation(session, conversation, bot.user_id);
       } else if (nextStep) {
         await session.update({ current_step_id: nextStep.id });
       } else {
