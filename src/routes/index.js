@@ -16,6 +16,7 @@ import uploadRouter from './uploads.js';
 // import adminAuditLogRouter from './adminAuditLog.js';
 import adminUserRouter from './adminUser.js';
 import healthRouter from './health.js';
+import promptTemplateRouter from './promptTemplate.js';
 
 const router = Router();
 
@@ -27,9 +28,9 @@ router.use('/instances', authMiddleware, instanceRouter);
 router.use('/conversations', authMiddleware, conversationRouter);
 router.use('/flows', authMiddleware, flowRouter);
 router.use('/products', authMiddleware, productRouter);
+router.use('/prompt-templates', authMiddleware, promptTemplateRouter);
 router.use('/', flowStepTest);
 router.use('/', uploadRouter);
-
 router.use('/admin/users/', authMiddleware, adminMiddleware, adminUserRouter);
 router.use('/plans', authMiddleware, planRouter);
 router.use('/health', healthRouter);
