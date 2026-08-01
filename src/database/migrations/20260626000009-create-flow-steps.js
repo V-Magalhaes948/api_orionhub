@@ -34,7 +34,7 @@ module.exports = {
         allowNull: false,
         defaultValue: false,
       },
-      hands_off_to_human: {
+      include_catalog: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
         defaultValue: false,

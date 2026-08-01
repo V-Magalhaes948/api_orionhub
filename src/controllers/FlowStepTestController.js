@@ -49,6 +49,7 @@ class FlowStepTestController {
       ];
 
       const result = await executeStep(
+        flow,
         bot,
         fakeStep,
         fakeNextStep,

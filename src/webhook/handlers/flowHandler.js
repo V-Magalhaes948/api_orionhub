@@ -90,12 +90,16 @@ export async function executeStep(
     `{\n` +
     `  "reply": "sua resposta para o usuário aqui",\n` +
     `  "step_completed": true ou false,\n` +
-    `  "collected": {}\n` +
+    `  "collected": {},\n` +
+    `  "outcome": "resolved" ou "handoff"\n` +
     `}\n\n` +
     `Regras:\n` +
     `- "reply": o que o usuário vai receber, no tom definido pelo system_prompt\n` +
     `- "step_completed": true SOMENTE quando o critério de conclusão acima foi atingido\n` +
     `- "collected": objeto com os dados coletados nesta etapa (pode ser vazio {})\n` +
+    `- "outcome": SOMENTE relevante quando "step_completed" é true. Use "handoff" quando o motivo da conclusão ` +
+    `envolve algo que precisa de um humano para prosseguir (ex: confirmação de compra/pedido). Use "resolved" para ` +
+    `os demais casos (dúvidas esclarecidas, informação repassada, etc). Se "step_completed" for false, retorne "outcome": "resolved".\n` +
     `- Se o usuário mandar algo fora de contexto, responda brevemente e redirecione para o objetivo da etapa\n` +
     `- REGRA CRÍTICA: "step_completed" reflete SOMENTE se o critério de conclusão foi atingido pela mensagem do usuário — nada mais. ` +
     `Decidir fazer uma pergunta de esclarecimento na sua "reply" NÃO impede marcar "step_completed": true. ` +
@@ -120,6 +124,7 @@ export async function executeStep(
       reply: raw,
       step_completed: false,
       collected: {},
+      outcome: 'resolved',
     };
   }
 }
@@ -154,9 +159,6 @@ async function closeFlowAndConversation(session, conversation, userId) {
 }
 
 async function pauseForHumanHandoff(session, conversation, userId, nextStep) {
-  // Avança o step da sessão (se houver próximo) para que, quando o bot for
-  // retomado manualmente, ele continue do ponto certo do fluxo em vez de
-  // repetir a etapa que acabou de ser concluída.
   await session.update({
     current_step_id: nextStep ? nextStep.id : session.current_step_id,
   });
@@ -239,7 +241,7 @@ export async function flowHandler(
 
     const history = await fetchStepHistory(conversation.id);
 
-    const { reply, step_completed, collected } = await executeStep(
+    const { reply, step_completed, collected, outcome } = await executeStep(
       flow,
       bot,
       step,
@@ -274,20 +276,23 @@ export async function flowHandler(
     }
 
     if (step_completed) {
-      if (step.hands_off_to_human) {
+      const wantsHandoff = outcome === 'handoff' && step.hands_off_to_human;
+      const wantsClose = step.closes_conversation && !wantsHandoff;
+
+      if (wantsHandoff) {
         await pauseForHumanHandoff(
           session,
           conversation,
           bot.user_id,
           nextStep
         );
-      } else if (step.closes_conversation) {
+      } else if (wantsClose) {
         await closeFlowAndConversation(session, conversation, bot.user_id);
       } else if (nextStep) {
         await session.update({ current_step_id: nextStep.id });
       } else {
         console.warn(
-          `[FlowHandler] Etapa "${step.content.substring(0, 50)}..." concluída sem closes_conversation marcado e sem próxima etapa cadastrada — encerrando por padrão.`
+          `[FlowHandler] Etapa "${step.content.substring(0, 50)}..." concluída sem destino aplicável e sem próxima etapa — encerrando por padrão.`
         );
         await closeFlowAndConversation(session, conversation, bot.user_id);
       }

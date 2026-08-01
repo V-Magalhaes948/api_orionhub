@@ -45,11 +45,33 @@ async function checkFeaturedLimit(userId, excludeProductId = null) {
   return null;
 }
 
+async function checkProductLimit(userId, excludeProductId = null) {
+  const user = await User.findByPk(userId, {
+    include: [
+      { model: Plan, as: 'plan' },
+      { model: AddonPackage, as: 'addon' },
+    ],
+  });
+
+  const limit = getEffectiveProductLimit(user);
+
+  const where = { user_id: userId, active: true };
+  if (excludeProductId) {
+    where.id = { [Sequelize.Op.ne]: excludeProductId };
+  }
+
+  const count = await Product.count({ where });
+
+  if (count >= limit) {
+    return `Você atingiu o limite de ${limit} produtos ativos do seu plano. Faça upgrade ou desative outro produto para continuar.`;
+  }
+  return null;
+}
+
 class ProductController {
   async index(req, res) {
     try {
       const { category, active } = req.query;
-
       const where = { user_id: req.userId };
       if (category) where.category = category;
       if (active !== undefined) where.active = active === 'true';
@@ -102,6 +124,11 @@ class ProductController {
         metadata,
       } = req.body;
 
+      const limitError = await checkProductLimit(req.userId);
+      if (limitError) {
+        return res.status(400).json({ message: limitError });
+      }
+
       if (is_featured && req.body.active === false) {
         return res.status(400).json({
           message:
@@ -110,9 +137,9 @@ class ProductController {
       }
 
       if (is_featured) {
-        const limitError = await checkFeaturedLimit(req.userId);
-        if (limitError) {
-          return res.status(400).json({ message: limitError });
+        const featuredLimitError = await checkFeaturedLimit(req.userId);
+        if (featuredLimitError) {
+          return res.status(400).json({ message: featuredLimitError });
         }
       }
 
@@ -179,6 +206,17 @@ class ProductController {
       } = req.body;
 
       const nextActive = active !== undefined ? active : product.active;
+
+      // Só precisa checar o limite quando o produto está sendo
+      // REATIVADO (false -> true). Se já estava ativo, ou está sendo
+      // desativado, não faz sentido bloquear.
+      if (nextActive && !product.active) {
+        const limitError = await checkProductLimit(req.userId, product.id);
+        if (limitError) {
+          return res.status(400).json({ message: limitError });
+        }
+      }
+
       let nextFeatured =
         is_featured !== undefined ? is_featured : product.is_featured;
 
@@ -244,11 +282,6 @@ class ProductController {
           .json({ message: 'activeProductIds deve ser um array' });
       }
 
-      // FIX: dedupe antes de qualquer validação/uso. Sem isso, um id
-      // repetido no payload (ex: duplo clique no frontend) inflava
-      // activeProductIds.length e fazia a checagem de ownership via
-      // Product.count (que conta linhas distintas no banco) falhar mesmo
-      // quando todos os produtos eram válidos e do próprio usuário.
       const uniqueProductIds = [...new Set(activeProductIds)];
 
       const user = await User.findByPk(req.userId, {

@@ -16,6 +16,7 @@ import AdminAuditLog from '../models/AdminAuditLog.js';
 import ActivityLog from '../models/ActivityLog.js';
 import AddonPackage from '../models/AddonPackage.js';
 import PlanAddon from '../models/PlanAddon.js';
+import PromptTemplate from '../models/PromptTemplate.js';
 
 const models = [
   Plan,
@@ -34,6 +35,7 @@ const models = [
   ActivityLog,
   AddonPackage,
   PlanAddon,
+  PromptTemplate,
 ];
 
 const connection = new Sequelize(databaseConfig);

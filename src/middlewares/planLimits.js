@@ -102,7 +102,7 @@ export function checkInstanceLimit() {
 
       if (count >= user.plan.max_instances) {
         return res.status(403).json({
-          message: `Your ${user.plan.name} plan allows a maximum of ${user.plan.max_instances} instance(s).`,
+          message: `O seu plano ${user.plan.name} permite um máximo de ${user.plan.max_instances} instância(s).`,
         });
       }
 
@@ -110,7 +110,7 @@ export function checkInstanceLimit() {
     } catch (error) {
       return res
         .status(500)
-        .json({ message: 'Error verifying instance limit.' });
+        .json({ message: 'Erro de verificação do limite de instâncias.' });
     }
   };
 }
@@ -166,7 +166,7 @@ export function blockIfSelectionPending() {
     } catch (error) {
       return res
         .status(500)
-        .json({ message: 'Error verifying selection status.' });
+        .json({ message: 'Erro de verificação de seleção.' });
     }
   };
 }
@@ -194,7 +194,7 @@ export function checkProductLimit() {
 
       if (count >= limit) {
         return res.status(403).json({
-          message: `Your ${user.plan.name} plan allows a maximum of ${limit} product(s).`,
+          message: `O seu plano ${user.plan.name} permite um máximo de ${limit} produto(s).`,
         });
       }
 
@@ -202,7 +202,7 @@ export function checkProductLimit() {
     } catch (error) {
       return res
         .status(500)
-        .json({ message: 'Error verifying product limit.' });
+        .json({ message: 'Erro de verificação do limite de produtos.' });
     }
   };
 }
