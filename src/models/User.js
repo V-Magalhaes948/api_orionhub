@@ -99,6 +99,11 @@ export default class User extends Model {
           allowNull: false,
           defaultValue: false,
         },
+        instance_selection_pending: {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false,
+        },
         failed_login_attempts: {
           type: Sequelize.INTEGER,
           defaultValue: 0,

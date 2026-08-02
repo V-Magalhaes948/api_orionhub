@@ -15,6 +15,15 @@ import {
 const router = Router();
 
 router.get(
+  '/selection',
+  InstanceController.selectionStatus.bind(InstanceController)
+);
+router.post(
+  '/selection',
+  InstanceController.confirmSelection.bind(InstanceController)
+);
+
+router.get(
   '/',
   cacheMiddleware(60),
   InstanceController.index.bind(InstanceController)

@@ -1,12 +1,22 @@
 import axios from 'axios';
 import { randomUUID } from 'crypto';
+import { Op } from 'sequelize';
 
 import Instance from '../models/Instance.js';
 import Bot from '../models/Bot.js';
+import Flow from '../models/Flow.js';
+import FlowStep from '../models/FlowStep.js';
+import FlowSession from '../models/FlowSession.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
+import User from '../models/User.js';
+import Plan from '../models/Plan.js';
+
 import { handleError } from '../utils/handleError.js';
 import { invalidateCache } from '../middlewares/cache.js';
 import { slugify } from '../utils/slugify.js';
 import { logActivity } from '../utils/logActivity.js';
+import { getEffectiveInstanceLimit } from '../utils/generateInstanceLimit.js';
 
 const INSTANCE_ATTRIBUTES = [
   'id',
@@ -204,13 +214,177 @@ class InstanceController {
 
       await invalidateCache(req.userId, ['/instances']);
 
-      return res
-        .status(200)
-        .json({
-          message: 'Instance deleted successfully',
-          instanceId: instance.id,
-        });
+      return res.status(200).json({
+        message: 'Instance deleted successfully',
+        instanceId: instance.id,
+      });
     } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async selectionStatus(req, res) {
+    try {
+      const user = await User.findByPk(req.userId, {
+        include: [{ model: Plan, as: 'plan' }],
+      });
+
+      const limit = getEffectiveInstanceLimit(user);
+
+      const instances = await Instance.findAll({
+        where: { user_id: req.userId },
+        attributes: ['id', 'name', 'phone_number', 'status', 'created_at'],
+        order: [['created_at', 'DESC']],
+      });
+
+      return res.status(200).json({
+        pending: user.instance_selection_pending,
+        limit,
+        instances,
+      });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async confirmSelection(req, res) {
+    const t = await Instance.sequelize.transaction();
+
+    try {
+      const { activeInstanceIds } = req.body;
+
+      if (!Array.isArray(activeInstanceIds)) {
+        await t.rollback();
+        return res
+          .status(400)
+          .json({ message: 'activeInstanceIds deve ser um array' });
+      }
+
+      const uniqueIds = [...new Set(activeInstanceIds)];
+
+      const user = await User.findByPk(req.userId, {
+        include: [{ model: Plan, as: 'plan' }],
+      });
+
+      const limit = getEffectiveInstanceLimit(user);
+
+      if (uniqueIds.length > limit) {
+        await t.rollback();
+        return res
+          .status(400)
+          .json({ message: `Selecione no máximo ${limit} instâncias` });
+      }
+
+      const allInstances = await Instance.findAll({
+        where: { user_id: user.id },
+        transaction: t,
+      });
+
+      const owned = allInstances.filter((i) => uniqueIds.includes(i.id));
+      if (owned.length !== uniqueIds.length) {
+        await t.rollback();
+        return res
+          .status(400)
+          .json({ message: 'IDs inválidos ou não pertencem a este usuário' });
+      }
+
+      const toDelete = allInstances.filter((i) => !uniqueIds.includes(i.id));
+
+      for (const instance of toDelete) {
+        const bot = await Bot.findOne({
+          where: { instance_id: instance.id },
+          transaction: t,
+        });
+
+        if (bot) {
+          const conversations = await Conversation.findAll({
+            where: { bot_id: bot.id },
+            attributes: ['id'],
+            transaction: t,
+          });
+          const conversationIds = conversations.map((c) => c.id);
+
+          if (conversationIds.length > 0) {
+            await Message.destroy({
+              where: { conversation_id: { [Op.in]: conversationIds } },
+              transaction: t,
+            });
+            await Conversation.destroy({
+              where: { id: { [Op.in]: conversationIds } },
+              transaction: t,
+            });
+          }
+
+          if (bot.flow_id) {
+            const flowId = bot.flow_id;
+            await FlowSession.destroy({
+              where: { flow_id: flowId },
+              transaction: t,
+            });
+            await FlowStep.destroy({
+              where: { flow_id: flowId },
+              transaction: t,
+            });
+            await bot.update({ flow_id: null }, { transaction: t });
+            await Flow.destroy({ where: { id: flowId }, transaction: t });
+          }
+
+          await bot.destroy({ transaction: t });
+        }
+
+        // Só apaga do banco aqui — a limpeza na Evolution API foi movida
+        // pra depois da resposta, pra não deixar o cliente esperando a
+        // rede da Evolution API (que pode ser lenta) antes de ver sucesso.
+        await instance.destroy({ transaction: t });
+      }
+
+      await user.update(
+        { instance_selection_pending: false },
+        { transaction: t }
+      );
+
+      await logActivity({
+        userId: user.id,
+        action: 'instance.selection_confirmed',
+        resourceType: 'user',
+        resourceId: user.id,
+        metadata: {
+          active_count: uniqueIds.length,
+          deleted_count: toDelete.length,
+          limit,
+        },
+        ip: req.ip,
+      });
+
+      await t.commit();
+
+      await invalidateCache(user.id, [
+        '/instances',
+        '/bots',
+        '/conversations',
+        '/flows',
+      ]);
+
+      // Responde AGORA — o banco já está consistente, o cliente não
+      // precisa esperar a Evolution API responder.
+      res.status(200).json({ message: 'Seleção confirmada com sucesso' });
+
+      // Limpeza na Evolution API roda em background, sem bloquear a
+      // resposta. Falha aqui não afeta o usuário — mesmo padrão
+      // best-effort já usado no destroy() individual.
+      const evolutionClient = this.#getEvolutionClient();
+      for (const instance of toDelete) {
+        evolutionClient
+          .delete(`/instance/delete/${instance.instance_id}`)
+          .catch((err) => {
+            console.warn(
+              `[InstanceController] Falha ao remover instância ${instance.instance_id} na Evolution API pós-seleção:`,
+              err.response?.data || err.message
+            );
+          });
+      }
+    } catch (error) {
+      await t.rollback();
       return handleError(res, error);
     }
   }

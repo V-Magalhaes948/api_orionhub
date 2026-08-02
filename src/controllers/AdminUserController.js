@@ -5,12 +5,14 @@ import Plan from '../models/Plan.js';
 import Product from '../models/Product.js';
 import PlanAddon from '../models/PlanAddon.js';
 import AddonPackage from '../models/AddonPackage.js';
+import Instance from '../models/Instance.js';
 
 import { invalidateCache } from '../middlewares/cache.js';
 
 import { logActivity } from '../utils/logActivity.js';
 import { handleError } from '../utils/handleError.js';
 import { getEffectiveProductLimit } from '../utils/generateProductLimit.js';
+import { getEffectiveInstanceLimit } from '../utils/generateInstanceLimit.js';
 
 import { expireUserAccess } from '../services/planExpirationService.js';
 import SocketService from '../services/socketService.js';
@@ -214,6 +216,18 @@ class AdminUserController {
 
       const needsSelection = plan_id ? activeCount > newLimit : false;
 
+      const newInstanceLimit = plan_id
+        ? getEffectiveInstanceLimit({ plan })
+        : 0;
+
+      const activeInstanceCount = await Instance.count({
+        where: { user_id: user.id },
+      });
+
+      const needsInstanceSelection = plan_id
+        ? activeInstanceCount > newInstanceLimit
+        : false;
+
       await user.update({
         plan_id: plan_id || null,
         plan_status: plan_id ? 'active' : 'pending',
@@ -224,22 +238,34 @@ class AdminUserController {
         messages_this_month: messagesThisMonth,
         messages_reset_at: messagesResetAt,
         product_selection_pending: needsSelection,
+        instance_selection_pending: needsInstanceSelection,
       });
 
       if (!plan_id) {
         await expireUserAccess(user);
-      } else if (needsSelection) {
-        SocketService.emitNotification(
-          user.id,
-          'product_selection_required',
-          'Selecione seus produtos ativos',
-          `Seu novo plano permite ${newLimit} produtos ativos. Selecione quais manter no catálogo.`
-        );
+      } else {
+        if (needsSelection) {
+          SocketService.emitNotification(
+            user.id,
+            'product_selection_required',
+            'Selecione seus produtos ativos',
+            `Seu novo plano permite ${newLimit} produtos ativos. Selecione quais manter no catálogo.`
+          );
+        }
+        if (needsInstanceSelection) {
+          SocketService.emitNotification(
+            user.id,
+            'instance_selection_required',
+            'Selecione suas instâncias ativas',
+            `Seu novo plano permite ${newInstanceLimit} instâncias. Selecione quais manter — as demais serão removidas permanentemente, junto com bots, fluxos e conversas.`
+          );
+        }
       }
 
       await invalidateCache(user.id, ['/products']);
       await invalidateCache(user.id, ['/instances']);
       await invalidateCache(user.id, ['/conversations']);
+      await invalidateCache(user.id, ['/flows']);
       await invalidateCache(user.id, ['/users']);
 
       await logActivity({

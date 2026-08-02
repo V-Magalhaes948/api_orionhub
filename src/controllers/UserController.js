@@ -18,6 +18,7 @@ const USER_ATTRIBUTES = [
   'addon_status',
   'addon_expires_at',
   'product_selection_pending',
+  'instance_selection_pending',
   'is_admin',
   'account_status',
   'messages_this_month',
