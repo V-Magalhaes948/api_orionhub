@@ -21,7 +21,8 @@ export function cacheMiddleware(ttl = 60) {
       };
 
       next();
-    } catch {
+    } catch (err) {
+      console.error('[CACHE ERROR]', err.message);
       next();
     }
   };
