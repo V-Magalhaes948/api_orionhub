@@ -5,6 +5,6 @@ import { cacheMiddleware } from '../middlewares/cache.js';
 
 const router = Router();
 router.get('/', cacheMiddleware(10), PlanController.index);
-router.get('/:id/addons', PlanController.addons);
+router.get('/:id/addons', cacheMiddleware(10), PlanController.addons);
 
 export default router;

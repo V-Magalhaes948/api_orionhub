@@ -15,7 +15,11 @@ import {
 
 const router = Router();
 
-router.get('/selection', ProductController.selectionStatus);
+router.get(
+  '/selection',
+  cacheMiddleware(120),
+  ProductController.selectionStatus
+);
 router.post('/selection', ProductController.confirmSelection);
 
 router.get(
