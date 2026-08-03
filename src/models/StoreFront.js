@@ -22,6 +22,7 @@ export default class StoreFront extends Model {
       },
       {
         sequelize,
+        tableName: 'storefronts',
       }
     );
 
