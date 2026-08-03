@@ -35,6 +35,6 @@ router.use('/', uploadRouter);
 router.use('/admin/users/', authMiddleware, adminMiddleware, adminUserRouter);
 router.use('/plans', authMiddleware, planRouter);
 router.use('/health', healthRouter);
-router.use('/stores', storesRouter);
+router.use('/v1/stores', storesRouter);
 
 export default router;
