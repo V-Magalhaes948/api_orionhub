@@ -1,11 +1,15 @@
 const { User, Storefront } = require('../models');
 
 async function main() {
-  const userId = '04a3d40a-1404-48cc-b053-d1e15a015e9e';
-  const slug = 'olfater-perfum';
+  const [, , userId, slug] = process.argv;
+
+  if (!userId || !slug) {
+    console.error('Uso: node scripts/createStorefront.js <user_id> <slug>');
+    process.exit(1);
+  }
 
   const user = await User.findByPk(userId);
-  if (!user) throw new Error('User não encontrado');
+  if (!user) throw new Error(`User ${userId} não encontrado`);
 
   const storefront = await Storefront.create({ user_id: userId, slug });
   console.log('Storefront criado:', storefront.toJSON());
