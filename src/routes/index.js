@@ -17,6 +17,7 @@ import uploadRouter from './uploads.js';
 import adminUserRouter from './adminUser.js';
 import healthRouter from './health.js';
 import promptTemplateRouter from './promptTemplate.js';
+import storesRouter from './stores.js';
 
 const router = Router();
 
@@ -34,5 +35,6 @@ router.use('/', uploadRouter);
 router.use('/admin/users/', authMiddleware, adminMiddleware, adminUserRouter);
 router.use('/plans', authMiddleware, planRouter);
 router.use('/health', healthRouter);
+router.use('/stores', storesRouter);
 
 export default router;

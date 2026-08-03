@@ -149,6 +149,7 @@ export default class User extends Model {
 
   static associate(models) {
     this.hasMany(models.Bot, { foreignKey: 'user_id', as: 'bots' });
+    this.hasMany(models.StoreFront, { foreignKey: 'user_id' });
     this.hasMany(models.Product, { foreignKey: 'user_id', as: 'products' });
     this.hasMany(models.AdminAuditLog, {
       foreignKey: 'admin_id',
