@@ -1,4 +1,4 @@
-import Store from '../models/StoreFront.js';
+import StoreFront from '../models/StoreFront.js';
 
 import { handleError } from '../utils/handleError.js';
 
@@ -6,7 +6,7 @@ class StoreController {
   async index(req, res) {
     try {
       const { slug } = req.params;
-      const storefront = await Storefront.findOne({ where: { slug } });
+      const storefront = await StoreFront.findOne({ where: { slug } });
       if (!storefront)
         return res.status(404).json({ error: 'Loja não encontrada' });
 
@@ -23,7 +23,7 @@ class StoreController {
   async indexProducts(req, res) {
     try {
       const { slug } = req.params;
-      const storefront = await Storefront.findOne({ where: { slug } });
+      const storefront = await StoreFront.findOne({ where: { slug } });
       if (!storefront)
         return res.status(404).json({ error: 'Loja não encontrada' });
 
