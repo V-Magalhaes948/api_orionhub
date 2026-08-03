@@ -1,4 +1,6 @@
 import StoreFront from '../models/StoreFront.js';
+import User from '../models/User.js';
+import Product from '../models/Product.js';
 
 import { handleError } from '../utils/handleError.js';
 
