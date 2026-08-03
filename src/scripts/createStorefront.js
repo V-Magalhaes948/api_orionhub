@@ -1,5 +1,4 @@
-import connection from '../models/index.js';
-
+import connection from '../database/index.js';
 async function main() {
   const [, , userId, slug] = process.argv;
 
