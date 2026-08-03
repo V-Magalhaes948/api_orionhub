@@ -15,7 +15,7 @@ export default class StoreFront extends Model {
           allowNull: false,
         },
         slug: {
-          type: DataTypes.STRING,
+          type: Sequelize.STRING,
           allowNull: false,
           unique: true,
         },
