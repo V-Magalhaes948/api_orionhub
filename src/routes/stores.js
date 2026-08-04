@@ -6,5 +6,6 @@ const router = Router();
 
 router.get('/:slug', StoreController.index);
 router.get('/:slug/products', StoreController.indexProducts);
+router.get('/:slug/featured-products', StoreController.featuredProducts);
 
 export default router;

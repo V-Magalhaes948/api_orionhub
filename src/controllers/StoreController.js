@@ -38,6 +38,27 @@ class StoreController {
       return handleError(res, error);
     }
   }
+
+  async featuredProducts(req, res) {
+    try {
+      const { slug } = req.params;
+      const storefront = await StoreFront.findOne({ where: { slug } });
+      if (!storefront)
+        return res.status(404).json({ error: 'Loja não encontrada' });
+
+      const products = await Product.findAll({
+        where: {
+          user_id: storefront.user_id,
+          active: true,
+          is_featured: true,
+        },
+      });
+
+      res.json({ products });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
 }
 
 export default new StoreController();
