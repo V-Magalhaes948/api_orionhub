@@ -31,6 +31,21 @@ class StoreController {
 
       const products = await Product.findAll({
         where: { user_id: storefront.user_id, active: true },
+        attributes: [
+          'id',
+          'name',
+          'description',
+          'category',
+          'stock_quantity',
+          'brand',
+          'pricing_mode',
+          'unit_label',
+          'price',
+          'price_per_unit',
+          'min_sale_quantity',
+          'image_catalog_url',
+          'metadata',
+        ],
       });
 
       res.json({ products });
@@ -52,6 +67,21 @@ class StoreController {
           active: true,
           is_featured: true,
         },
+        attributes: [
+          'id',
+          'name',
+          'description',
+          'category',
+          'stock_quantity',
+          'brand',
+          'pricing_mode',
+          'unit_label',
+          'price',
+          'price_per_unit',
+          'min_sale_quantity',
+          'image_catalog_url',
+          'metadata',
+        ],
       });
 
       res.json({ products });
