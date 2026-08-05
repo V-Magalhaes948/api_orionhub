@@ -44,6 +44,7 @@ class StoreController {
           'price_per_unit',
           'min_sale_quantity',
           'image_catalog_url',
+          'image_vitrine_url',
           'metadata',
         ],
       });
@@ -80,6 +81,7 @@ class StoreController {
           'price_per_unit',
           'min_sale_quantity',
           'image_catalog_url',
+          'image_vitrine_url',
           'metadata',
         ],
       });
