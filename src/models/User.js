@@ -66,7 +66,13 @@ export default class User extends Model {
           allowNull: true,
         },
         plan_status: {
-          type: Sequelize.ENUM('active', 'expired', 'pending', 'trialing'),
+          type: Sequelize.ENUM(
+            'active',
+            'expired',
+            'pending',
+            'trialing',
+            'pending_verification'
+          ),
           defaultValue: 'pending',
         },
         plan_expires_at: {
