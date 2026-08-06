@@ -47,3 +47,25 @@ export const globalRateLimit = buildRateLimit({
   skip: (req) => req.path === '/health',
   message: { message: 'Muitas requisições. Tente novamente mais tarde.' },
 });
+
+export const verifyEmailRateLimit = buildRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message:
+      'Muitas tentativas de verificação. Tente novamente em alguns minutos.',
+  },
+});
+
+export const resendCodeRateLimit = buildRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    message:
+      'Muitas solicitações de código. Tente novamente em alguns minutos.',
+  },
+});

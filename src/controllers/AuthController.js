@@ -7,8 +7,15 @@ import Plan from '../models/Plan.js';
 import { formatDate } from '../utils/formatDate.js';
 import { handleError } from '../utils/handleError.js';
 import { emailQueue } from '../queues/emailQueue.js';
+import { sendVerificationCodeEmail } from '../lib/mailer.js';
 
 const TRIAL_DAYS = 3;
+const VERIFICATION_CODE_TTL_MINUTES = 15;
+const MAX_VERIFICATION_ATTEMPTS = 5;
+
+function generateVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 class AuthController {
   async register(req, res) {
@@ -22,24 +29,41 @@ class AuthController {
       }
 
       const defaultPlan = await Plan.findOne({ where: { is_default: true } });
-      const trialExpiresAt = defaultPlan
-        ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
-        : null;
+
+      const verificationCode = generateVerificationCode();
+      const verificationCodeExpiresAt = new Date(
+        Date.now() + VERIFICATION_CODE_TTL_MINUTES * 60 * 1000
+      );
 
       const newUser = await User.create({
         name,
         email: normalizedEmail,
         password,
         plan_id: defaultPlan ? defaultPlan.id : null,
-        plan_status: defaultPlan ? 'trialing' : 'pending',
-        plan_expires_at: trialExpiresAt,
+        plan_status: defaultPlan ? 'pending_verification' : 'pending',
+        plan_expires_at: null, // só é definido em verifyEmail
         messages_reset_at: null,
+        email_verified: false,
+        verification_code: verificationCode,
+        verification_code_expires_at: verificationCodeExpiresAt,
+        verification_attempts: 0,
       });
 
-      const { password_hash, refresh_token, ...safeUser } = newUser.toJSON();
+      try {
+        await sendVerificationCodeEmail(
+          normalizedEmail,
+          name,
+          verificationCode
+        );
+      } catch (mailError) {
+        console.error('Failed to send verification email:', mailError);
+      }
+
+      const { password_hash, refresh_token, verification_code, ...safeUser } =
+        newUser.toJSON();
 
       return res.status(201).json({
-        message: 'User registered successfully',
+        message: 'Conta criada. Verifique seu e-mail para ativar a conta.',
         user: {
           ...safeUser,
           created_at: formatDate(newUser.created_at),
@@ -84,6 +108,13 @@ class AuthController {
           });
         }
         return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      if (!user.email_verified) {
+        return res.status(403).json({
+          message: 'E-mail não verificado. Verifique sua caixa de entrada.',
+          code: 'EMAIL_NOT_VERIFIED',
+        });
       }
 
       const token = jwt.sign({ id: user.id }, process.env.TOKEN_SECRET, {
@@ -228,6 +259,99 @@ class AuthController {
       });
 
       return res.status(200).json({ message: 'Senha redefinida com sucesso' });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async verifyEmail(req, res) {
+    try {
+      const { email, code } = req.body;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const user = await User.findOne({ where: { email: normalizedEmail } });
+      if (!user) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+
+      if (user.email_verified) {
+        return res.status(400).json({ message: 'E-mail já verificado' });
+      }
+
+      if (
+        !user.verification_code ||
+        !user.verification_code_expires_at ||
+        new Date() > new Date(user.verification_code_expires_at)
+      ) {
+        return res
+          .status(400)
+          .json({ message: 'Código expirado. Solicite um novo.' });
+      }
+
+      if (user.verification_attempts >= MAX_VERIFICATION_ATTEMPTS) {
+        return res
+          .status(429)
+          .json({ message: 'Muitas tentativas. Solicite um novo código.' });
+      }
+
+      if (user.verification_code !== code) {
+        await user.increment('verification_attempts');
+        return res.status(400).json({ message: 'Código inválido' });
+      }
+
+      const defaultPlan = user.plan_id
+        ? await Plan.findByPk(user.plan_id)
+        : null;
+      const trialExpiresAt = defaultPlan
+        ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+        : null;
+
+      await user.update({
+        email_verified: true,
+        verification_code: null,
+        verification_code_expires_at: null,
+        verification_attempts: 0,
+        plan_status: defaultPlan ? 'trialing' : 'pending',
+        plan_expires_at: trialExpiresAt,
+      });
+
+      return res.status(200).json({ message: 'E-mail verificado com sucesso' });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
+
+  async resendVerificationCode(req, res) {
+    try {
+      const { email } = req.body;
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const user = await User.findOne({ where: { email: normalizedEmail } });
+      if (!user) {
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+      if (user.email_verified) {
+        return res.status(400).json({ message: 'E-mail já verificado' });
+      }
+
+      const verificationCode = generateVerificationCode();
+      const verificationCodeExpiresAt = new Date(
+        Date.now() + VERIFICATION_CODE_TTL_MINUTES * 60 * 1000
+      );
+
+      await user.update({
+        verification_code: verificationCode,
+        verification_code_expires_at: verificationCodeExpiresAt,
+        verification_attempts: 0,
+      });
+
+      await sendVerificationCodeEmail(
+        normalizedEmail,
+        user.name,
+        verificationCode
+      );
+
+      return res.status(200).json({ message: 'Novo código enviado' });
     } catch (error) {
       return handleError(res, error);
     }

@@ -39,3 +39,19 @@ export const resetPasswordSchema = {
     password: z.string().min(6).max(50),
   }),
 };
+
+export const verifyEmailSchema = {
+  body: z.object({
+    email: z.string().trim().toLowerCase().email(),
+    code: z
+      .string()
+      .length(6)
+      .regex(/^\d+$/, 'Código deve conter apenas números'),
+  }),
+};
+
+export const resendVerificationCodeSchema = {
+  body: z.object({
+    email: z.string().trim().toLowerCase().email(),
+  }),
+};

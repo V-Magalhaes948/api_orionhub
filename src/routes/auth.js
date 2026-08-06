@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 
 import AuthController from '../controllers/AuthController.js';
 import { validate } from '../middlewares/validateJson.js';
+
 import {
   loginSchema,
   refreshSchema,
@@ -10,11 +11,15 @@ import {
   logoutSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
+  resendVerificationCodeSchema,
 } from '../schemas/authSchemas.js';
 import {
   loginRateLimit,
   registerRateLimit,
   forgotPasswordRateLimit,
+  verifyEmailRateLimit,
+  resendCodeRateLimit,
 } from '../middlewares/rateLimit.js';
 
 const router = Router();
@@ -43,6 +48,18 @@ router.post(
   '/reset-password',
   validate(resetPasswordSchema),
   AuthController.resetPassword
+);
+router.post(
+  '/verify-email',
+  verifyEmailRateLimit,
+  validate(verifyEmailSchema),
+  AuthController.verifyEmail
+);
+router.post(
+  '/resend-verification-code',
+  resendCodeRateLimit,
+  validate(resendVerificationCodeSchema),
+  AuthController.resendVerificationCode
 );
 
 export default router;

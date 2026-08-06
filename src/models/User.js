@@ -112,6 +112,24 @@ export default class User extends Model {
           type: Sequelize.DATE,
           allowNull: true,
         },
+        email_verified: {
+          type: Sequelize.BOOLEAN,
+          defaultValue: false,
+          allowNull: false,
+        },
+        verification_code: {
+          type: Sequelize.STRING(6),
+          allowNull: true,
+        },
+        verification_code_expires_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
+        verification_attempts: {
+          type: Sequelize.INTEGER,
+          defaultValue: 0,
+          allowNull: false,
+        },
         password_hash: {
           type: Sequelize.STRING,
           defaultValue: '',

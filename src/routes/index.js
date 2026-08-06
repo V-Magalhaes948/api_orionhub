@@ -18,14 +18,13 @@ import storesRouter from './stores.js';
 
 import authMiddleware from '../middlewares/auth.js';
 import adminMiddleware from '../middlewares/adminOnly.js';
-import webhookMiddleware from '../middlewares/verifyWebhookSecret.js';
 
 const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/users', authMiddleware, userRouter);
 router.use('/bots', authMiddleware, botRouter);
-router.use('/webhook', webhookMiddleware, webhookRouter);
+router.use('/webhook', webhookRouter);
 router.use('/instances', authMiddleware, instanceRouter);
 router.use('/conversations', authMiddleware, conversationRouter);
 router.use('/flows', authMiddleware, flowRouter);

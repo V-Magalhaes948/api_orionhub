@@ -6,6 +6,7 @@ import { invalidateCache } from '../middlewares/cache.js';
 import AddonPackage from '../models/AddonPackage.js';
 import { handleError } from '../utils/handleError.js';
 import { logActivity } from '../utils/logActivity.js';
+import { sendVerificationCodeEmail } from '../lib/mailer.js';
 
 const USER_ATTRIBUTES = [
   'id',
@@ -25,6 +26,10 @@ const USER_ATTRIBUTES = [
   'created_at',
   'updated_at',
 ];
+
+function generateVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
 
 class UserController {
   async show(req, res) {
@@ -55,7 +60,21 @@ class UserController {
         return res.status(404).json({ message: 'User not found' });
       }
 
-      await user.update({ name, email, password });
+      const emailChanged = email && email !== user.email;
+
+      const updatePayload = { name, email, password };
+
+      if (emailChanged) {
+        updatePayload.email_verified = false;
+        updatePayload.verification_code = generateVerificationCode();
+        updatePayload.verification_code_expires_at = new Date(
+          Date.now() + 15 * 60 * 1000
+        );
+        updatePayload.verification_attempts = 0;
+        updatePayload.refresh_token = null; // invalida a sessão
+      }
+
+      await user.update(updatePayload);
 
       await invalidateCache(req.userId, ['/users']);
 
@@ -64,9 +83,26 @@ class UserController {
         action: 'user.updated',
         resourceType: 'user',
         resourceId: user.id,
-        metadata: { name: user.name },
+        metadata: { name: user.name, email_changed: emailChanged },
         ip: req.ip,
       });
+
+      if (emailChanged) {
+        try {
+          await sendVerificationCodeEmail(
+            user.email,
+            user.name,
+            user.verification_code
+          );
+        } catch (mailError) {
+          console.error('Failed to send verification email:', mailError);
+        }
+
+        return res.status(200).json({
+          message: 'Email updated, please log in again',
+          forceLogout: true,
+        });
+      }
 
       if (password) {
         const token = jwt.sign({ id: user.id }, process.env.TOKEN_SECRET, {
