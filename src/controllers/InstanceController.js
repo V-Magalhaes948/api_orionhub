@@ -75,7 +75,10 @@ class InstanceController {
       await evolutionClient.post(`/webhook/set/${instance_id}`, {
         webhook: {
           enabled: true,
-          url: `${process.env.APP_URL}/webhook?secret=${process.env.WEBHOOK_SECRET}`,
+          url: `${process.env.WEBHOOK_INTERNAL_URL}/webhook`,
+          headers: {
+            'x-webhook-secret': process.env.WEBHOOK_SECRET,
+          },
           webhookByEvents: false,
           webhookBase64: false,
           events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
