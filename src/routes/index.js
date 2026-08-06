@@ -1,8 +1,6 @@
 import { Router } from 'express';
 
 import authRouter from './auth';
-import authMiddleware from '../middlewares/auth.js';
-import adminMiddleware from '../middlewares/adminOnly.js';
 import userRouter from './user';
 import botRouter from './bots.js';
 import webhookRouter from './webhook';
@@ -13,18 +11,21 @@ import planRouter from './plans.js';
 import flowStepTest from './flowStepTest.js';
 import productRouter from './products.js';
 import uploadRouter from './uploads.js';
-// import adminAuditLogRouter from './adminAuditLog.js';
 import adminUserRouter from './adminUser.js';
 import healthRouter from './health.js';
 import promptTemplateRouter from './promptTemplate.js';
 import storesRouter from './stores.js';
+
+import authMiddleware from '../middlewares/auth.js';
+import adminMiddleware from '../middlewares/adminOnly.js';
+import webhookMiddleware from '../middlewares/verifyWebhookSecret.js';
 
 const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/users', authMiddleware, userRouter);
 router.use('/bots', authMiddleware, botRouter);
-router.use('/webhook', webhookRouter);
+router.use('/webhook', webhookMiddleware, webhookRouter);
 router.use('/instances', authMiddleware, instanceRouter);
 router.use('/conversations', authMiddleware, conversationRouter);
 router.use('/flows', authMiddleware, flowRouter);
