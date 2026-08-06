@@ -299,21 +299,29 @@ class AuthController {
         return res.status(400).json({ message: 'Código inválido' });
       }
 
-      const defaultPlan = user.plan_id
-        ? await Plan.findByPk(user.plan_id)
-        : null;
-      const trialExpiresAt = defaultPlan
-        ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
-        : null;
-
-      await user.update({
+      const updatePayload = {
         email_verified: true,
         verification_code: null,
         verification_code_expires_at: null,
         verification_attempts: 0,
-        plan_status: defaultPlan ? 'trialing' : 'pending',
-        plan_expires_at: trialExpiresAt,
-      });
+      };
+
+      // Só inicia o trial se for a primeira verificação de cadastro.
+      // Contas que já saíram desse estado (trialing, active, expired...)
+      // mantêm seu plan_status/plan_expires_at intactos ao reverificar e-mail.
+      if (user.plan_status === 'pending_verification') {
+        const defaultPlan = user.plan_id
+          ? await Plan.findByPk(user.plan_id)
+          : null;
+        const trialExpiresAt = defaultPlan
+          ? new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+          : null;
+
+        updatePayload.plan_status = defaultPlan ? 'trialing' : 'pending';
+        updatePayload.plan_expires_at = trialExpiresAt;
+      }
+
+      await user.update(updatePayload);
 
       return res.status(200).json({ message: 'E-mail verificado com sucesso' });
     } catch (error) {
