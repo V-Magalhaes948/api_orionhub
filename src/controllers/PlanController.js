@@ -8,6 +8,14 @@ class PlanController {
     try {
       const plans = await Plan.findAll({
         order: [['price', 'ASC']],
+        attributes: [
+          'id',
+          'name',
+          'max_instances',
+          'max_products',
+          'max_messages_per_month',
+          'price',
+        ],
       });
       return res.status(200).json(plans);
     } catch (error) {
@@ -17,15 +25,22 @@ class PlanController {
 
   async addons(req, res) {
     try {
-      const plan = await Plan.findByPk(req.params.id);
+      const plan = await Plan.findByPk(req.params.id, { attributes: ['id'] });
 
       if (!plan) {
-        return res.status(404).json({ message: 'Plan not found' });
+        return res.status(404).json({ message: 'Plano não encontrado.' });
       }
 
       const planAddons = await PlanAddon.findAll({
         where: { plan_id: req.params.id },
-        include: [{ model: AddonPackage, as: 'addon' }],
+        attributes: ['id', 'price'],
+        include: [
+          {
+            model: AddonPackage,
+            as: 'addon',
+            attributes: ['id', 'name', 'extra_products'],
+          },
+        ],
       });
 
       return res.status(200).json(planAddons);

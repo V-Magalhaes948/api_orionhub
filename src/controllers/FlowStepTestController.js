@@ -25,17 +25,17 @@ class FlowStepTestController {
       });
 
       if (!bot) {
-        return res.status(404).json({ message: 'Bot not found' });
+        return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
       if (!bot.flow_id) {
-        return res.status(404).json({ message: 'Flow not found' });
+        return res.status(404).json({ message: 'Flow não encontrado.' });
       }
 
       const flow = await Flow.findByPk(bot.flow_id);
 
       if (!flow) {
-        return res.status(404).json({ message: 'Flow not found' });
+        return res.status(404).json({ message: 'Flow não encontrado.' });
       }
 
       const fakeStep = { content, completion_criteria, closes_conversation };
@@ -70,7 +70,11 @@ class FlowStepTestController {
 
       await flow.reload();
 
-      return res.status(200).json({ ...result, test_count: flow.test_count });
+      return res.status(200).json({
+        outcome: result.outcome,
+        reply: result.reply,
+        test_count: flow.test_count,
+      });
     } catch (error) {
       return handleError(res, error);
     }

@@ -5,7 +5,7 @@ export function verifyWebhookSecret(req, res, next) {
   const expectedSecret = process.env.WEBHOOK_SECRET;
 
   if (!receivedSecret || !expectedSecret) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: 'Não autorizado.' });
   }
 
   const receivedBuffer = Buffer.from(receivedSecret);
@@ -16,7 +16,7 @@ export function verifyWebhookSecret(req, res, next) {
     receivedBuffer.length !== expectedBuffer.length ||
     !timingSafeEqual(receivedBuffer, expectedBuffer)
   ) {
-    return res.status(401).json({ message: 'Unauthorized' });
+    return res.status(401).json({ message: 'Não autorizado.' });
   }
 
   return next();

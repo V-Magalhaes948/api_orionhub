@@ -12,7 +12,7 @@ import routes from './routes';
 class App {
   constructor() {
     this.app = express();
-    this.app.set('trust proxy', 1); // necessário atrás de Nginx/proxy reverso
+    this.app.set('trust proxy', 1);
     this.middlewares();
     this.routes();
   }

@@ -20,14 +20,10 @@ import { getEffectiveInstanceLimit } from '../utils/generateInstanceLimit.js';
 
 const INSTANCE_ATTRIBUTES = [
   'id',
-  'user_id',
   'name',
   'instance_id',
-  'instance_token',
   'phone_number',
   'status',
-  'created_at',
-  'updated_at',
 ];
 
 class InstanceController {
@@ -105,7 +101,7 @@ class InstanceController {
       await invalidateCache(req.userId, ['/instances']);
 
       return res.status(201).json({
-        message: 'Instance created successfully',
+        message: 'Instância criada com sucesso.',
         instanceId: instance.id,
       });
     } catch (error) {
@@ -122,11 +118,13 @@ class InstanceController {
       });
 
       if (!instance) {
-        return res.status(404).json({ message: 'Instance not found' });
+        return res.status(404).json({ message: 'Instância não encontrada.' });
       }
 
       if (instance.status === 'connected') {
-        return res.status(400).json({ message: 'Instance already connected' });
+        return res
+          .status(400)
+          .json({ message: 'Instância já está conectada.' });
       }
 
       const { data } = await evolutionClient.get(
@@ -148,7 +146,7 @@ class InstanceController {
       });
 
       if (!instance) {
-        return res.status(404).json({ message: 'Instance not found' });
+        return res.status(404).json({ message: 'Instância não encontrada.' });
       }
 
       const { data } = await evolutionClient.get(
@@ -180,7 +178,7 @@ class InstanceController {
       });
 
       if (!instance) {
-        return res.status(404).json({ message: 'Instance not found' });
+        return res.status(404).json({ message: 'Instância não encontrada.' });
       }
 
       const botExist = await Bot.findOne({
@@ -189,7 +187,8 @@ class InstanceController {
 
       if (botExist) {
         return res.status(409).json({
-          message: 'Instance has a bot connected, cannot delete the instance.',
+          message:
+            'Instância tem um bot conectado, não é possível excluir a instância.',
         });
       }
 
@@ -218,7 +217,7 @@ class InstanceController {
       await invalidateCache(req.userId, ['/instances']);
 
       return res.status(200).json({
-        message: 'Instance deleted successfully',
+        message: 'Instância excluída com sucesso.',
         instanceId: instance.id,
       });
     } catch (error) {
@@ -229,7 +228,14 @@ class InstanceController {
   async selectionStatus(req, res) {
     try {
       const user = await User.findByPk(req.userId, {
-        include: [{ model: Plan, as: 'plan' }],
+        attributes: ['id', 'instance_selection_pending', 'plan_id'],
+        include: [
+          {
+            model: Plan,
+            as: 'plan',
+            attributes: ['id', 'name', 'max_instances'],
+          },
+        ],
       });
 
       const limit = getEffectiveInstanceLimit(user);
@@ -335,9 +341,6 @@ class InstanceController {
           await bot.destroy({ transaction: t });
         }
 
-        // Só apaga do banco aqui — a limpeza na Evolution API foi movida
-        // pra depois da resposta, pra não deixar o cliente esperando a
-        // rede da Evolution API (que pode ser lenta) antes de ver sucesso.
         await instance.destroy({ transaction: t });
       }
 
@@ -368,13 +371,8 @@ class InstanceController {
         '/flows',
       ]);
 
-      // Responde AGORA — o banco já está consistente, o cliente não
-      // precisa esperar a Evolution API responder.
       res.status(200).json({ message: 'Seleção confirmada com sucesso' });
 
-      // Limpeza na Evolution API roda em background, sem bloquear a
-      // resposta. Falha aqui não afeta o usuário — mesmo padrão
-      // best-effort já usado no destroy() individual.
       const evolutionClient = this.#getEvolutionClient();
       for (const instance of toDelete) {
         evolutionClient

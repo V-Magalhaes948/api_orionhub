@@ -197,6 +197,7 @@ export async function flowHandler(
   phone
 ) {
   if (!bot.flow_id) return null;
+  if (bot.mode !== 'ai') return null;
 
   const lockKey = `flowlock:${conversation.id}`;
   const lockToken = randomUUID();

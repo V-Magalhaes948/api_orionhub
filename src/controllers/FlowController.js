@@ -19,7 +19,21 @@ class FlowController {
 
       const flow = await Flow.findOne({
         where: { id: bot.flow_id },
-        include: [{ model: FlowStep, as: 'steps' }],
+        attributes: ['id', 'include_catalog'],
+        include: [
+          {
+            model: FlowStep,
+            as: 'steps',
+            attributes: [
+              'id',
+              'order',
+              'content',
+              'completion_criteria',
+              'closes_conversation',
+              'hands_off_to_human',
+            ],
+          },
+        ],
         order: [[{ model: FlowStep, as: 'steps' }, 'order', 'ASC']],
       });
 

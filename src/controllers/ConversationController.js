@@ -29,7 +29,8 @@ class ConversationController {
         const bot = await Bot.findOne({
           where: { id: botId, user_id: req.userId },
         });
-        if (!bot) return res.status(404).json({ message: 'Bot not found' });
+        if (!bot)
+          return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
       const conversations = await Conversation.findAll({
@@ -68,7 +69,9 @@ class ConversationController {
       });
 
       if (!conversation) {
-        return res.status(404).json({ message: 'Conversation not found' });
+        return res
+          .status(404)
+          .json({ message: 'Conversation não encontrada.' });
       }
 
       return res.status(200).json(conversation);
@@ -81,7 +84,15 @@ class ConversationController {
     try {
       const conversation = await Conversation.findOne({
         where: { id: req.params.id },
-        include: [{ model: Bot, as: 'bot', where: { user_id: req.userId } }],
+        attributes: ['id', 'bot_id', 'status'],
+        include: [
+          {
+            model: Bot,
+            as: 'bot',
+            attributes: [],
+            where: { user_id: req.userId },
+          },
+        ],
       });
 
       if (!conversation) {
@@ -135,11 +146,19 @@ class ConversationController {
 
       const conversation = await Conversation.findOne({
         where: { id: req.params.id },
-        include: [{ model: Bot, as: 'bot', where: { user_id: req.userId } }],
+        attributes: ['id', 'bot_id', 'status'],
+        include: [
+          {
+            model: Bot,
+            as: 'bot',
+            attributes: [],
+            where: { user_id: req.userId },
+          },
+        ],
       });
 
       if (!conversation) {
-        return res.status(404).json({ message: 'Conversation not found' });
+        return res.status(404).json({ message: 'Conversa não encontrada.' });
       }
 
       await conversation.update({ status });
@@ -165,7 +184,7 @@ class ConversationController {
       await invalidateCache(req.userId, ['/conversations']);
 
       return res.status(200).json({
-        message: 'Conversation updated successfully',
+        message: 'Conversa atualizada com sucesso.',
         conversation: {
           id: conversation.id,
           status: conversation.status,

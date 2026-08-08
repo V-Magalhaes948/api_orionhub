@@ -4,9 +4,11 @@ import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
 import Plan from '../models/Plan.js';
-import { formatDate } from '../utils/formatDate.js';
+
 import { handleError } from '../utils/handleError.js';
+
 import { emailQueue } from '../queues/emailQueue.js';
+
 import { sendVerificationCodeEmail } from '../lib/mailer.js';
 
 const TRIAL_DAYS = 3;
@@ -25,7 +27,7 @@ class AuthController {
 
       const user = await User.findOne({ where: { email: normalizedEmail } });
       if (user) {
-        return res.status(400).json({ message: 'User already exists' });
+        return res.status(400).json({ message: 'Usuário já existe.' });
       }
 
       const defaultPlan = await Plan.findOne({ where: { is_default: true } });
@@ -41,7 +43,7 @@ class AuthController {
         password,
         plan_id: defaultPlan ? defaultPlan.id : null,
         plan_status: defaultPlan ? 'pending_verification' : 'pending',
-        plan_expires_at: null, // só é definido em verifyEmail
+        plan_expires_at: null,
         messages_reset_at: null,
         email_verified: false,
         verification_code: verificationCode,
@@ -65,9 +67,12 @@ class AuthController {
       return res.status(201).json({
         message: 'Conta criada. Verifique seu e-mail para ativar a conta.',
         user: {
-          ...safeUser,
-          created_at: formatDate(newUser.created_at),
-          updated_at: formatDate(newUser.updated_at),
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          plan_status: newUser.plan_status,
+          email_verified: newUser.email_verified,
+          created_at: newUser.created_at,
         },
       });
     } catch (error) {
@@ -103,11 +108,11 @@ class AuthController {
           await user.update({
             failed_login_attempts: shouldLock ? 0 : attempts,
             locked_until: shouldLock
-              ? new Date(Date.now() + 5 * 60 * 1000) // 5 minutos
+              ? new Date(Date.now() + 5 * 60 * 1000)
               : null,
           });
         }
-        return res.status(400).json({ message: 'Invalid email or password' });
+        return res.status(400).json({ message: 'E-mail ou senha inválidos' });
       }
 
       if (!user.email_verified) {
@@ -258,6 +263,10 @@ class AuthController {
         locked_until: null,
       });
 
+      io.to(`user:${user.id}`).emit('force-logout', {
+        reason: 'password_reset',
+      });
+
       return res.status(200).json({ message: 'Senha redefinida com sucesso' });
     } catch (error) {
       return handleError(res, error);
@@ -306,9 +315,6 @@ class AuthController {
         verification_attempts: 0,
       };
 
-      // Só inicia o trial se for a primeira verificação de cadastro.
-      // Contas que já saíram desse estado (trialing, active, expired...)
-      // mantêm seu plan_status/plan_expires_at intactos ao reverificar e-mail.
       if (user.plan_status === 'pending_verification') {
         const defaultPlan = user.plan_id
           ? await Plan.findByPk(user.plan_id)

@@ -1,19 +1,20 @@
 import Sequelize from 'sequelize';
 
 import Product from '../models/Product.js';
-import { handleError } from '../utils/handleError.js';
-import { invalidateCache } from '../middlewares/cache.js';
-import { logActivity } from '../utils/logActivity.js';
 import User from '../models/User.js';
 import Plan from '../models/Plan.js';
 import AddonPackage from '../models/AddonPackage.js';
+
+import { invalidateCache } from '../middlewares/cache.js';
+
 import { getEffectiveProductLimit } from '../utils/generateProductLimit.js';
+import { handleError } from '../utils/handleError.js';
+import { logActivity } from '../utils/logActivity.js';
 
 const MAX_FEATURED_PRODUCTS = 6;
 
 const PRODUCT_ATTRIBUTES = [
   'id',
-  'user_id',
   'name',
   'description',
   'category',
@@ -33,6 +34,29 @@ const PRODUCT_ATTRIBUTES = [
   'updated_at',
 ];
 
+export function serializeProduct(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    brand: product.brand,
+    pricing_mode: product.pricing_mode,
+    unit_label: product.unit_label,
+    price: product.price,
+    price_per_unit: product.price_per_unit,
+    stock_quantity: product.stock_quantity,
+    min_sale_quantity: product.min_sale_quantity,
+    image_catalog_url: product.image_catalog_url,
+    image_vitrine_url: product.image_vitrine_url,
+    active: product.active,
+    is_featured: product.is_featured,
+    metadata: product.metadata,
+    created_at: product.created_at,
+    updated_at: product.updated_at,
+  };
+}
+
 async function checkFeaturedLimit(userId, excludeProductId = null) {
   const where = { user_id: userId, is_featured: true };
   if (excludeProductId) {
@@ -47,9 +71,15 @@ async function checkFeaturedLimit(userId, excludeProductId = null) {
 
 async function checkProductLimit(userId, excludeProductId = null) {
   const user = await User.findByPk(userId, {
+    // ← usar o parâmetro
+    attributes: ['id', 'addon_status', 'product_selection_pending'],
     include: [
-      { model: Plan, as: 'plan' },
-      { model: AddonPackage, as: 'addon' },
+      { model: Plan, as: 'plan', attributes: ['id', 'max_products'] },
+      {
+        model: AddonPackage,
+        as: 'addon',
+        attributes: ['id', 'extra_products'],
+      },
     ],
   });
 
@@ -82,7 +112,7 @@ class ProductController {
         order: [['updated_at', 'DESC']],
       });
 
-      return res.status(200).json(products);
+      return res.status(200).json(products.map(serializeProduct));
     } catch (error) {
       return handleError(res, error);
     }
@@ -99,7 +129,7 @@ class ProductController {
         return res.status(404).json({ message: 'Product not found' });
       }
 
-      return res.status(200).json(product);
+      return res.status(200).json(serializeProduct(product));
     } catch (error) {
       return handleError(res, error);
     }
@@ -171,7 +201,12 @@ class ProductController {
       });
 
       await invalidateCache(req.userId, ['/products']);
-      return res.status(201).json({ product });
+      await invalidateCache(req.userId, [
+        '/stores/:slug/products',
+        '/stores/:slug/featured-products',
+      ]);
+
+      return res.status(201).json({ product: serializeProduct(product) });
     } catch (error) {
       return handleError(res, error);
     }
@@ -207,9 +242,6 @@ class ProductController {
 
       const nextActive = active !== undefined ? active : product.active;
 
-      // Só precisa checar o limite quando o produto está sendo
-      // REATIVADO (false -> true). Se já estava ativo, ou está sendo
-      // desativado, não faz sentido bloquear.
       if (nextActive && !product.active) {
         const limitError = await checkProductLimit(req.userId, product.id);
         if (limitError) {
@@ -265,8 +297,12 @@ class ProductController {
       });
 
       await invalidateCache(req.userId, ['/products']);
+      await invalidateCache(req.userId, [
+        '/stores/:slug/products',
+        '/stores/:slug/featured-products',
+      ]);
 
-      return res.status(200).json({ product });
+      return res.status(200).json({ product: serializeProduct(product) });
     } catch (error) {
       return handleError(res, error);
     }
@@ -285,9 +321,14 @@ class ProductController {
       const uniqueProductIds = [...new Set(activeProductIds)];
 
       const user = await User.findByPk(req.userId, {
+        attributes: ['id', 'addon_status', 'product_selection_pending'],
         include: [
-          { model: Plan, as: 'plan' },
-          { model: AddonPackage, as: 'addon' },
+          { model: Plan, as: 'plan', attributes: ['id', 'max_products'] },
+          {
+            model: AddonPackage,
+            as: 'addon',
+            attributes: ['id', 'extra_products'],
+          },
         ],
       });
 
@@ -326,6 +367,10 @@ class ProductController {
       });
 
       await invalidateCache(user.id, ['/products']);
+      await invalidateCache(user.id, [
+        '/stores/:slug/products',
+        '/stores/:slug/featured-products',
+      ]);
 
       return res
         .status(200)
@@ -338,9 +383,14 @@ class ProductController {
   async selectionStatus(req, res) {
     try {
       const user = await User.findByPk(req.userId, {
+        attributes: ['id', 'addon_status', 'product_selection_pending'],
         include: [
-          { model: Plan, as: 'plan' },
-          { model: AddonPackage, as: 'addon' },
+          { model: Plan, as: 'plan', attributes: ['id', 'max_products'] },
+          {
+            model: AddonPackage,
+            as: 'addon',
+            attributes: ['id', 'extra_products'],
+          },
         ],
       });
 
@@ -364,7 +414,16 @@ class ProductController {
       return res.status(200).json({
         pending: user.product_selection_pending,
         limit,
-        products,
+        products: products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          brand: p.brand,
+          price: p.price,
+          active: p.active,
+          image_vitrine_url: p.image_vitrine_url,
+          updated_at: p.updated_at,
+        })),
       });
     } catch (error) {
       return handleError(res, error);
@@ -393,6 +452,10 @@ class ProductController {
       });
 
       await invalidateCache(req.userId, ['/products']);
+      await invalidateCache(req.userId, [
+        '/stores/:slug/products',
+        '/stores/:slug/featured-products',
+      ]);
 
       return res.status(200).json({ message: 'Product removed successfully' });
     } catch (error) {

@@ -4,17 +4,9 @@ import { handleError } from '../utils/handleError.js';
 import { invalidateCache } from '../middlewares/cache.js';
 import { logActivity } from '../utils/logActivity.js';
 
-const BOT_ATTRIBUTES = [
-  'id',
-  'user_id',
-  'instance_id',
-  'name',
-  'system_prompt',
-  'mode',
-  'active',
-  'created_at',
-  'updated_at',
-];
+const BOT_ATTRIBUTES = ['id', 'instance_id', 'name', 'mode', 'active'];
+
+const BOT_DETAIL_ATTRIBUTES = [...BOT_ATTRIBUTES, 'user_id', 'system_prompt'];
 
 class BotController {
   async index(req, res) {
@@ -41,14 +33,14 @@ class BotController {
       if (!instance) {
         return res
           .status(404)
-          .json({ message: 'Instance not found or not connected' });
+          .json({ message: 'Instância não encontrada ou não conectada.' });
       }
 
       const instanceInUse = await Bot.findOne({ where: { instance_id } });
       if (instanceInUse) {
         return res
           .status(409)
-          .json({ message: 'Instance already linked to a bot' });
+          .json({ message: 'Instância já está vinculada a um bot.' });
       }
 
       const bot = await Bot.create({
@@ -72,7 +64,7 @@ class BotController {
 
       return res
         .status(201)
-        .json({ message: 'Bot created successfully', botId: bot.id });
+        .json({ message: 'Bot criado com sucesso.', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -82,12 +74,12 @@ class BotController {
     try {
       const bot = await Bot.findOne({
         where: { id: req.params.id, user_id: req.userId },
-        attributes: BOT_ATTRIBUTES,
+        attributes: BOT_DETAIL_ATTRIBUTES,
         include: [{ model: Instance, as: 'instance' }],
       });
 
       if (!bot) {
-        return res.status(404).json({ message: 'Bot not found' });
+        return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
       return res.status(200).json(bot);
@@ -105,7 +97,7 @@ class BotController {
       });
 
       if (!bot) {
-        return res.status(404).json({ message: 'Bot not found' });
+        return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
       await bot.update({ name, system_prompt, mode });
@@ -123,7 +115,7 @@ class BotController {
 
       return res
         .status(200)
-        .json({ message: 'Bot updated successfully', botId: bot.id });
+        .json({ message: 'Bot atualizado com sucesso.', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -136,7 +128,7 @@ class BotController {
       });
 
       if (!bot) {
-        return res.status(404).json({ message: 'Bot not found' });
+        return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
       await bot.destroy();
@@ -154,7 +146,7 @@ class BotController {
 
       return res
         .status(200)
-        .json({ message: 'Bot deleted successfully', botId: bot.id });
+        .json({ message: 'Bot excluído com sucesso.', botId: bot.id });
     } catch (error) {
       return handleError(res, error);
     }

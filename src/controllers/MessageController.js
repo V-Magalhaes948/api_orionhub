@@ -27,11 +27,18 @@ class MessageController {
 
       const conversation = await Conversation.findOne({
         where: { id: conversationId },
-        include: [{ model: Bot, as: 'bot', where: { user_id: req.userId } }],
+        include: [
+          {
+            model: Bot,
+            as: 'bot',
+            attributes: [],
+            where: { user_id: req.userId },
+          },
+        ],
       });
 
       if (!conversation) {
-        return res.status(404).json({ message: 'Conversation not found' });
+        return res.status(404).json({ message: 'Conversa não encontrada.' });
       }
 
       const messages = await Message.findAll({
@@ -63,8 +70,15 @@ class MessageController {
           {
             model: Bot,
             as: 'bot',
+            attributes: [],
             where: { user_id: req.userId },
-            include: [{ model: Instance, as: 'instance' }],
+            include: [
+              {
+                model: Instance,
+                as: 'instance',
+                attributes: ['id', 'status', 'phone_number'],
+              },
+            ],
           },
         ],
       });
@@ -117,7 +131,14 @@ class MessageController {
         role: 'assistant',
       });
 
-      return res.status(201).json(message);
+      return res.status(201).json({
+        id: message.id,
+        conversation_id: message.conversation_id,
+        content: message.content,
+        role: message.role,
+        message_id: message.message_id,
+        created_at: message.created_at,
+      });
     } catch (error) {
       return handleError(res, error);
     }

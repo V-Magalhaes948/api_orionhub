@@ -2,29 +2,29 @@ import jwt from 'jsonwebtoken';
 
 import User from '../models/User.js';
 import Plan from '../models/Plan.js';
-import { invalidateCache } from '../middlewares/cache.js';
 import AddonPackage from '../models/AddonPackage.js';
-import { handleError } from '../utils/handleError.js';
-import { logActivity } from '../utils/logActivity.js';
+
+import { invalidateCache } from '../middlewares/cache.js';
+
 import { sendVerificationCodeEmail } from '../lib/mailer.js';
 
+import { handleError } from '../utils/handleError.js';
+import { logActivity } from '../utils/logActivity.js';
+
 const USER_ATTRIBUTES = [
-  'id',
   'name',
   'email',
   'plan_id',
   'plan_status',
   'plan_expires_at',
+  'is_admin',
   'addon_id',
   'addon_status',
   'addon_expires_at',
   'product_selection_pending',
   'instance_selection_pending',
-  'is_admin',
   'account_status',
   'messages_this_month',
-  'created_at',
-  'updated_at',
 ];
 
 function generateVerificationCode() {
@@ -37,15 +37,32 @@ class UserController {
       const user = await User.findByPk(req.userId, {
         attributes: USER_ATTRIBUTES,
         include: [
-          { model: Plan, as: 'plan' },
-          { model: AddonPackage, as: 'addon' },
+          {
+            model: Plan,
+            as: 'plan',
+            attributes: [
+              'id',
+              'name',
+              'max_instances',
+              'max_products',
+              'max_messages_per_month',
+              'price',
+            ],
+          },
+          {
+            model: AddonPackage,
+            as: 'addon',
+            attributes: ['id', 'name', 'extra_products'],
+          },
         ],
       });
 
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: 'Usuário não encontrado.' });
       }
-      return res.status(200).json(user);
+
+      const userData = user.toJSON();
+      return res.status(200).json(userData);
     } catch (error) {
       return handleError(res, error);
     }
@@ -55,14 +72,15 @@ class UserController {
     try {
       const { name, email, password } = req.body;
       const user = await User.findByPk(req.userId);
+      if (!user)
+        return res.status(404).json({ message: 'Usuário não encontrado.' });
 
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
+      const emailChanged = email !== undefined && email !== user.email;
 
-      const emailChanged = email && email !== user.email;
-
-      const updatePayload = { name, email, password };
+      const updatePayload = {};
+      if (name !== undefined) updatePayload.name = name;
+      if (email !== undefined) updatePayload.email = email;
+      if (password !== undefined) updatePayload.password = password;
 
       if (emailChanged) {
         updatePayload.email_verified = false;
@@ -71,7 +89,7 @@ class UserController {
           Date.now() + 15 * 60 * 1000
         );
         updatePayload.verification_attempts = 0;
-        updatePayload.refresh_token = null; // invalida a sessão
+        updatePayload.refresh_token = null;
       }
 
       await user.update(updatePayload);
@@ -99,7 +117,8 @@ class UserController {
         }
 
         return res.status(200).json({
-          message: 'Email updated, please log in again',
+          message:
+            'Email atualizado com sucesso. Verifique seu email para confirmar a alteração.',
           forceLogout: true,
         });
       }
@@ -110,12 +129,12 @@ class UserController {
         });
         return res
           .status(200)
-          .json({ message: 'User updated successfully', token });
+          .json({ message: 'Usuário atualizado com sucesso.', token });
       }
 
       return res
         .status(200)
-        .json({ message: 'User updated successfully', userId: user.id });
+        .json({ message: 'Usuário atualizado com sucesso.', userId: user.id });
     } catch (error) {
       return handleError(res, error);
     }
@@ -126,7 +145,7 @@ class UserController {
       const user = await User.findByPk(req.userId);
 
       if (!user) {
-        return res.status(404).json({ message: 'User not found' });
+        return res.status(404).json({ message: 'Usuário não encontrado.' });
       }
 
       await user.update({ account_status: 'deleted' });
@@ -141,7 +160,7 @@ class UserController {
       });
 
       return res.status(200).json({
-        message: 'User deleted successfully',
+        message: 'Usuário excluído com sucesso.',
         userId: user.id,
       });
     } catch (error) {
