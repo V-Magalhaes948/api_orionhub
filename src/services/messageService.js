@@ -51,9 +51,8 @@ const MessageService = {
         role,
         created_at: message.created_at,
       });
-
       if (userId) {
-        SocketService.emitToUser(userId, 'message:new', {
+        SocketService.emitToUser(userId, 'conversation:preview', {
           conversation_id: conversationId,
           content,
           created_at: message.created_at,
