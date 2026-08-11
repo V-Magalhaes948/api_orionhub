@@ -11,8 +11,24 @@ const CATALOG_ATTRIBUTES = [
   'price_per_unit',
   'stock_quantity',
   'min_sale_quantity',
+  'metadata',
 ];
 const MAX_CATALOG_ITEMS = 50;
+
+function formatMetadata(metadata) {
+  if (!metadata || typeof metadata !== 'object') return null;
+
+  const entries = Object.entries(metadata)
+    .filter(
+      ([, value]) => value !== null && value !== undefined && value !== ''
+    )
+    .map(([key, value]) => {
+      const formattedValue = Array.isArray(value) ? value.join(', ') : value;
+      return `${key}: ${formattedValue}`;
+    });
+
+  return entries.length > 0 ? entries.join(', ') : null;
+}
 
 function formatProductLine(p) {
   const parts = [p.name];
@@ -34,9 +50,11 @@ function formatProductLine(p) {
     parts.push(`R$${Number(p.price).toFixed(2)}`);
   }
 
+  const metadataText = formatMetadata(p.metadata);
+  if (metadataText) parts.push(metadataText);
+
   return `- ${parts.join(' | ')}`;
 }
-
 export async function getCatalogText(userId) {
   try {
     const user = await User.findByPk(userId, {

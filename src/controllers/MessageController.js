@@ -70,7 +70,7 @@ class MessageController {
           {
             model: Bot,
             as: 'bot',
-            attributes: [],
+            attributes: ['id'], // was: []  — nested include needs the PK to map correctly
             where: { user_id: req.userId },
             include: [
               {
