@@ -120,6 +120,10 @@ class MessageController {
       try {
         await WhatsAppService.sendText(instance, destination, content);
       } catch (sendError) {
+        console.error(
+          'Erro ao enviar via WhatsApp:',
+          sendError?.response?.data || sendError.message || sendError
+        );
         return res.status(502).json({
           message: 'Falha ao enviar mensagem via WhatsApp. Tente novamente.',
         });
