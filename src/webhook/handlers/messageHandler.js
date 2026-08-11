@@ -242,13 +242,20 @@ export default async function messageHandler(webhookPayload) {
     await conversation.update({ contact_name: senderName });
   }
 
-  await MessageService.saveAndEmit({
+  const savedUserMessage = await MessageService.saveAndEmit({
     conversationId: conversation.id,
     content: text,
     role: 'user',
     messageId,
     userId: instance.user_id,
   });
+
+  if (!savedUserMessage.isNew) {
+    console.warn(
+      `[MessageHandler] Mensagem ${messageId} já processada por outra execução concorrente. Abortando.`
+    );
+    return;
+  }
 
   if (conversation.status === 'waiting') {
     console.warn(
