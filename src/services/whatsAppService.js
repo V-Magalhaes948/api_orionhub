@@ -15,7 +15,7 @@ class WhatsAppService {
     try {
       const { baseURL, headers } = this.#getClient(instance);
       const response = await axios.post(
-        `${baseURL}/message/sendText/${instance.name}`,
+        `${baseURL}/message/sendText/${instance.instance_id}`,
         { number: phone, text: message },
         { headers }
       );
