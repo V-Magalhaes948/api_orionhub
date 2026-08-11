@@ -61,7 +61,7 @@ const MessageService = {
       }
     }
 
-    return { message, isNew };
+    return Object.assign(message, { isNew });
   },
 };
 
