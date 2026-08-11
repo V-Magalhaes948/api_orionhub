@@ -61,7 +61,7 @@ const MessageService = {
       }
     }
 
-    return message;
+    return { message, isNew };
   },
 };
 
