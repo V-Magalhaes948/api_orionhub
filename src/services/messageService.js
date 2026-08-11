@@ -29,7 +29,13 @@ const MessageService = {
     }
   },
 
-  async saveAndEmit({ conversationId, content, role, messageId = null }) {
+  async saveAndEmit({
+    conversationId,
+    content,
+    role,
+    messageId = null,
+    userId = null,
+  }) {
     const { message, isNew } = await this.save({
       conversationId,
       content,
@@ -44,6 +50,12 @@ const MessageService = {
         content,
         role,
         created_at: message.created_at,
+      });
+    }
+    if (userId) {
+      SocketService.emitToUser(userId, 'message:new', {
+        conversation_id: conversationId,
+        content,
       });
     }
 
