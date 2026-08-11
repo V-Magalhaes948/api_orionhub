@@ -76,7 +76,7 @@ class MessageController {
               {
                 model: Instance,
                 as: 'instance',
-                attributes: ['id', 'status', 'phone_number'],
+                attributes: ['id', 'status', 'phone_number'], // <-- falta instance_id !
               },
             ],
           },
