@@ -247,7 +247,7 @@ export default async function messageHandler(webhookPayload) {
     content: text,
     role: 'user',
     messageId,
-    userId: instance.user_id, // novo
+    userId: instance.user_id,
   });
 
   if (conversation.status === 'waiting') {
