@@ -12,6 +12,7 @@ import { handleError } from '../utils/handleError.js';
 import { logActivity } from '../utils/logActivity.js';
 
 const USER_ATTRIBUTES = [
+  'id',
   'name',
   'email',
   'plan_id',
