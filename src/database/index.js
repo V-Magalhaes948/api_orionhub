@@ -18,6 +18,7 @@ import AddonPackage from '../models/AddonPackage.js';
 import PlanAddon from '../models/PlanAddon.js';
 import PromptTemplate from '../models/PromptTemplate.js';
 import StoreFront from '../models/StoreFront.js';
+import Notification from '../models/Notification.js';
 
 const models = [
   Plan,
@@ -38,6 +39,7 @@ const models = [
   PlanAddon,
   PromptTemplate,
   StoreFront,
+  Notification,
 ];
 
 const connection = new Sequelize(databaseConfig);

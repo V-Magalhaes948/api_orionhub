@@ -274,7 +274,7 @@ export default async function messageHandler(webhookPayload) {
       instance.user_id,
       'conversation_pending_resolution',
       'Contato aguardando resolução',
-      `Nova mensagem de um contato ainda não identificado pelo WhatsApp. Conversa: ${conversation.id}`
+      `Nova mensagem de um contato ainda não identificado pelo WhatsApp.`
     );
 
     return;

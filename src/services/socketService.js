@@ -1,4 +1,5 @@
 import { io } from '../server.js';
+import Notification from '../models/Notification.js';
 
 const SocketService = {
   emitToUser(userId, event, payload) {
@@ -9,12 +10,29 @@ const SocketService = {
     io.to(`conversation:${conversationId}`).emit(event, payload);
   },
 
-  emitNotification(userId, type, title, message, metadata = {}) {
+  async emitNotification(userId, type, title, message, metadata = {}) {
+    let saved;
+    try {
+      saved = await Notification.create({
+        user_id: userId,
+        type,
+        title,
+        message,
+        metadata,
+      });
+    } catch (err) {
+      console.error(
+        '[SocketService] Erro ao persistir notificação:',
+        err.message
+      );
+    }
+
     this.emitToUser(userId, 'notification', {
+      id: saved?.id,
       type,
       title,
       message,
-      at: new Date().toISOString(),
+      at: saved?.created_at ?? new Date().toISOString(),
       ...metadata,
     });
   },

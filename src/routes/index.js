@@ -15,6 +15,7 @@ import adminUserRouter from './adminUser.js';
 import healthRouter from './health.js';
 import promptTemplateRouter from './promptTemplate.js';
 import storesRouter from './stores.js';
+import notificationRouter from './notifications.js';
 
 import authMiddleware from '../middlewares/auth.js';
 import adminMiddleware from '../middlewares/adminOnly.js';
@@ -36,5 +37,6 @@ router.use('/admin/users/', authMiddleware, adminMiddleware, adminUserRouter);
 router.use('/plans', authMiddleware, planRouter);
 router.use('/health', healthRouter);
 router.use('/v1/stores', storesRouter);
+router.use('/notifications', authMiddleware, notificationRouter);
 
 export default router;

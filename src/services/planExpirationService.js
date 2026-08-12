@@ -77,12 +77,13 @@ export async function expireUserAddon(user) {
 
   if (activeCount > newLimit) {
     await user.update({ product_selection_pending: true });
-    io.to(`user:${user.id}`).emit('notification', {
-      type: 'product_selection_required',
-      title: 'Selecione seus produtos ativos',
-      message: `Seu addon expirou. Selecione até ${newLimit} produtos para manter ativos no catálogo.`,
-      at: new Date().toISOString(),
-    });
+
+    await SocketService.emitNotification(
+      user.id,
+      'product_selection_required',
+      'Selecione seus produtos ativos',
+      `Seu addon expirou. Selecione até ${newLimit} produtos para manter ativos no catálogo.`
+    );
   }
 
   await invalidateCache(user.id, ['/products']);
