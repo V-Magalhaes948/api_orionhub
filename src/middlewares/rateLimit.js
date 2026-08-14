@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
-import rateLimitRedis from '../lib/rateLimitRedis.js';
+import rateLimitRedis from '../queues/redis';
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 const noopMiddleware = (req, res, next) => next();
