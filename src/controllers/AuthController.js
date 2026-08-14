@@ -9,6 +9,8 @@ import { handleError } from '../utils/handleError.js';
 
 import { emailQueue } from '../queues/emailQueue.js';
 
+import SocketService from '../services/socketService.js';
+
 import { sendVerificationCodeEmail } from '../lib/mailer.js';
 
 const TRIAL_DAYS = 3;
@@ -17,6 +19,10 @@ const MAX_VERIFICATION_ATTEMPTS = 5;
 
 function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 class AuthController {
@@ -129,11 +135,11 @@ class AuthController {
       const refreshToken = jwt.sign(
         { id: user.id },
         process.env.REFRESH_TOKEN_SECRET,
-        { expiresIn: process.env.TOKEN_EXPIRATION || '1h' }
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION || '7d' }
       );
 
       await user.update({
-        refresh_token: refreshToken,
+        refresh_token: hashToken(refreshToken),
         last_login_at: new Date(),
         failed_login_attempts: 0,
         locked_until: null,
@@ -158,8 +164,10 @@ class AuthController {
           .json({ message: 'Invalid or expired refresh token' });
       }
 
+      const incomingHash = hashToken(refreshToken);
+
       const user = await User.findOne({
-        where: { id: decoded.id, refresh_token: refreshToken },
+        where: { id: decoded.id, refresh_token: incomingHash },
       });
 
       if (!user) {
@@ -173,10 +181,10 @@ class AuthController {
       const newRefreshToken = jwt.sign(
         { id: user.id },
         process.env.REFRESH_TOKEN_SECRET,
-        { expiresIn: '7d' }
+        { expiresIn: process.env.REFRESH_TOKEN_EXPIRATION || '7d' }
       );
 
-      await user.update({ refresh_token: newRefreshToken });
+      await user.update({ refresh_token: hashToken(newRefreshToken) });
 
       return res.json({ token: newToken, refreshToken: newRefreshToken });
     } catch (error) {
@@ -189,7 +197,7 @@ class AuthController {
       const { refreshToken } = req.body;
 
       const user = await User.findOne({
-        where: { refresh_token: refreshToken },
+        where: { refresh_token: hashToken(refreshToken) },
       });
 
       if (user) {
@@ -263,7 +271,7 @@ class AuthController {
         locked_until: null,
       });
 
-      io.to(`user:${user.id}`).emit('force-logout', {
+      SocketService.emitToUser(user.id, 'force-logout', {
         reason: 'password_reset',
       });
 

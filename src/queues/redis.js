@@ -1,20 +1,24 @@
 import Redis from 'ioredis';
 
-const redis = new Redis({
+const rateLimitRedis = new Redis({
   host: process.env.REDIS_HOST,
   port: process.env.REDIS_PORT || 6379,
   password: process.env.REDIS_PASSWORD || undefined,
   db: process.env.REDIS_DB ? Number(process.env.REDIS_DB) : 0,
-  maxRetriesPerRequest: null,
+  maxRetriesPerRequest: 1, // falha rápido em vez de travar a requisição HTTP
   retryStrategy(times) {
-    if (times > 10) return null;
-    return Math.min(times * 500, 3000);
+    if (times > 5) return null;
+    return Math.min(times * 200, 1000);
   },
   reconnectOnError: () => true,
   lazyConnect: false,
 });
 
-redis.on('connect', () => console.log('✅ Redis conectado'));
-redis.on('error', (err) => console.error('❌ Redis erro:', err.message));
+rateLimitRedis.on('connect', () =>
+  console.log('✅ Redis (rate limit) conectado')
+);
+rateLimitRedis.on('error', (err) =>
+  console.error('❌ Redis (rate limit) erro:', err.message)
+);
 
-export default redis;
+export default rateLimitRedis;

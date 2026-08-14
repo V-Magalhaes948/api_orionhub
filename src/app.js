@@ -18,11 +18,11 @@ class App {
   }
 
   middlewares() {
+    this.app.use(express.json());
     this.app.use(helmetConfig);
     this.app.use(cors(corsOptions));
     this.app.use(globalRateLimit);
     this.app.use(express.urlencoded({ extended: true }));
-    this.app.use(express.json());
     this.app.use('/uploads', express.static(resolve('uploads')));
   }
 
