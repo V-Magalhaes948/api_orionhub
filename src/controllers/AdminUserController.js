@@ -128,7 +128,11 @@ class AdminUserController {
         addon = await AddonPackage.findByPk(addon_id);
       }
 
-      if (plan_id && !user.is_admin && (!duration_days || duration_days < 1)) {
+      if (
+        plan_id &&
+        !user.is_admin &&
+        (duration_days === undefined || duration_days < 0)
+      ) {
         return res.status(400).json({
           error: 'Informe a duração em dias para atribuir este plano',
         });
@@ -137,7 +141,7 @@ class AdminUserController {
       if (
         addon_id &&
         !user.is_admin &&
-        (!addon_duration_days || addon_duration_days < 1)
+        (addon_duration_days === undefined || addon_duration_days < 0)
       ) {
         return res.status(400).json({
           error: 'Informe a duração em dias para atribuir este addon',

@@ -21,7 +21,7 @@ router.get(
   ProductController.selectionStatus
 );
 router.post('/selection', ProductController.confirmSelection);
-
+router.get('/recent', ProductController.recent);
 router.get(
   '/',
   cacheMiddleware(120),

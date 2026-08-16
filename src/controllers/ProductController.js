@@ -462,6 +462,21 @@ class ProductController {
       return handleError(res, error);
     }
   }
+
+  async recent(req, res) {
+    try {
+      const products = await Product.findAll({
+        where: { user_id: req.userId, active: true },
+        attributes: ['id', 'name', 'price', 'image_vitrine_url'],
+        order: [['created_at', 'DESC']],
+        limit: 5,
+      });
+
+      return res.status(200).json(products);
+    } catch (error) {
+      return handleError(res, error);
+    }
+  }
 }
 
 export default new ProductController();

@@ -206,3 +206,37 @@ export function checkProductLimit() {
     }
   };
 }
+
+const PLAN_FEATURE_BLOCKED_MESSAGE = (planName) =>
+  `Seu plano ${planName} não tem acesso a este recurso. Faça upgrade para desbloquear.`;
+
+export function blockPlanAccess(blockedPlanNames = []) {
+  return async (req, res, next) => {
+    try {
+      const user = await getUserWithPlan(req.userId);
+
+      if (user.is_admin) {
+        return next();
+      }
+
+      if (!user.plan_id || !user.plan) {
+        return res.status(403).json({ message: NO_ACTIVE_PLAN_MESSAGE });
+      }
+
+      const expired = await checkAndExpirePlan(user);
+      if (expired) {
+        return res.status(403).json({ message: PLAN_EXPIRED_MESSAGE });
+      }
+
+      if (blockedPlanNames.includes(user.plan.name)) {
+        return res.status(403).json({
+          message: PLAN_FEATURE_BLOCKED_MESSAGE(user.plan.name),
+        });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(500).json({ message: 'Erro de verificação do plano.' });
+    }
+  };
+}

@@ -19,25 +19,25 @@ export const updatePlanSchema = {
   body: z
     .object({
       plan_id: z.string().uuid().nullable().optional(),
-      duration_days: z.coerce.number().int().min(1).max(3650).optional(),
+      duration_days: z.coerce.number().int().min(0).max(3650).optional(),
       addon_id: z.string().uuid().nullable().optional(),
       addon_duration_days: z.coerce
         .number()
         .int()
-        .min(1)
+        .min(0)
         .max(3650)
         .nullable()
         .optional(),
     })
     .superRefine((data, ctx) => {
-      if (data.plan_id && !data.duration_days) {
+      if (data.plan_id && data.duration_days === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['duration_days'],
           message: 'Informe a duração em dias para atribuir este plano',
         });
       }
-      if (data.addon_id && !data.addon_duration_days) {
+      if (data.addon_id && data.addon_duration_days === undefined) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['addon_duration_days'],
