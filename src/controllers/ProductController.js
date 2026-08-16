@@ -467,7 +467,15 @@ class ProductController {
     try {
       const products = await Product.findAll({
         where: { user_id: req.userId, active: true },
-        attributes: ['id', 'name', 'price', 'image_vitrine_url'],
+        attributes: [
+          'id',
+          'name',
+          'pricing_mode',
+          'price',
+          'price_per_unit',
+          'unit_label',
+          'image_vitrine_url',
+        ],
         order: [['created_at', 'DESC']],
         limit: 5,
       });

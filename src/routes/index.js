@@ -74,19 +74,7 @@ router.use('/v1/stores', storesRouter);
 router.use('/notifications', authMiddleware, notificationRouter);
 
 // Catch-alls em '/' — SEMPRE por último, senão engolem tudo que vier depois
-router.use(
-  '/',
-  authMiddleware,
-  requireActivePlan(),
-  blockPlanAccess(['Essential']),
-  flowStepTest
-);
-router.use(
-  '/',
-  authMiddleware,
-  requireActivePlan(),
-  blockPlanAccess(['Essential']),
-  uploadRouter
-);
+router.use('/', authMiddleware, requireActivePlan(), flowStepTest);
+router.use('/', authMiddleware, requireActivePlan(), uploadRouter);
 
 export default router;

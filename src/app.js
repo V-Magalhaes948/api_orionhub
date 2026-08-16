@@ -23,7 +23,11 @@ class App {
     this.app.use(cors(corsOptions));
     this.app.use(globalRateLimit);
     this.app.use(express.urlencoded({ extended: true }));
-    this.app.use('/uploads', express.static(resolve('uploads')));
+    this.app.use(
+      '/uploads',
+      cors(corsOptions),
+      express.static(resolve(__dirname, '..', 'uploads'))
+    );
   }
 
   routes() {
