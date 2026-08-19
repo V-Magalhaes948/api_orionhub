@@ -76,6 +76,7 @@ export const verifyEmailRateLimit = buildRateLimit('verify-email', {
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.body?.email || req.ip, // [FIX] chave por e-mail, cai pro IP se não tiver
   message: {
     message:
       'Muitas tentativas de verificação. Tente novamente em alguns minutos.',

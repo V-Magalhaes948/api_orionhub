@@ -53,6 +53,10 @@ export default class User extends Model {
           type: Sequelize.INTEGER,
           defaultValue: 0,
         },
+        password_changed_at: {
+          type: Sequelize.DATE,
+          allowNull: true,
+        },
         messages_reset_at: {
           type: Sequelize.DATE,
           allowNull: true,

@@ -264,6 +264,7 @@ class AuthController {
 
       await user.update({
         password,
+        password_changed_at: new Date(), // [FIX]
         reset_token_hash: null,
         reset_token_expires_at: null,
         refresh_token: null,

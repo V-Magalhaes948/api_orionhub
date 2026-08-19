@@ -24,6 +24,15 @@ const authMiddleware = async (req, res, next) => {
       return res.status(403).json({ message: 'Conta não encontrada' });
     }
 
+    if (
+      user.password_changed_at &&
+      decoded.iat < Math.floor(user.password_changed_at.getTime() / 1000)
+    ) {
+      return res
+        .status(401)
+        .json({ message: 'Sessão expirada, faça login novamente' });
+    }
+
     req.userId = decoded.id;
     req.user = user;
     return next();
