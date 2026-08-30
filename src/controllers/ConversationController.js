@@ -19,7 +19,7 @@ const CONVERSATION_ATTRIBUTES = [
 class ConversationController {
   async index(req, res) {
     try {
-      const { botId, status } = req.query;
+      const { botId, status, limit, page } = req.query;
 
       const where = {};
       if (botId) where.bot_id = botId;
@@ -33,7 +33,10 @@ class ConversationController {
           return res.status(404).json({ message: 'Bot não encontrado.' });
       }
 
-      const conversations = await Conversation.findAll({
+      const parsedLimit = limit ? Math.min(Number(limit), 100) : null;
+      const parsedPage = page ? Math.max(Number(page), 1) : 1;
+
+      const queryOptions = {
         where,
         attributes: CONVERSATION_ATTRIBUTES,
         include: [
@@ -45,7 +48,14 @@ class ConversationController {
           },
         ],
         order: [['updated_at', 'DESC']],
-      });
+      };
+
+      if (parsedLimit) {
+        queryOptions.limit = parsedLimit;
+        queryOptions.offset = (parsedPage - 1) * parsedLimit;
+      }
+
+      const conversations = await Conversation.findAll(queryOptions);
 
       return res.status(200).json(conversations);
     } catch (error) {
