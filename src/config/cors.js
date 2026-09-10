@@ -3,15 +3,8 @@ const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-console.log('[DEBUG CORS] allowedOrigins:', JSON.stringify(allowedOrigins));
-
 export const corsOptions = {
   origin(origin, callback) {
-    const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
-      .split(',')
-      .map((o) => o.trim())
-      .filter(Boolean);
-
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {

@@ -67,7 +67,7 @@ export const globalRateLimit = buildRateLimit('global', {
   max: 1500,
   standardHeaders: false,
   legacyHeaders: false,
-  skip: (req) => req.path === '/health',
+  skip: (req) => req.path === '/health' || req.method === 'OPTIONS',
   message: { message: 'Muitas requisições. Tente novamente mais tarde.' },
 });
 

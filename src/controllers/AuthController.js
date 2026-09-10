@@ -12,6 +12,10 @@ import { emailQueue } from '../queues/emailQueue.js';
 import SocketService from '../services/socketService.js';
 
 import { sendVerificationCodeEmail } from '../lib/mailer.js';
+import {
+  REFRESH_COOKIE_NAME,
+  refreshCookieOptions,
+} from '../config/cookies.js';
 
 const TRIAL_DAYS = 3;
 const VERIFICATION_CODE_TTL_MINUTES = 15;
@@ -23,6 +27,14 @@ function generateVerificationCode() {
 
 function hashToken(token) {
   return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function safeCompareHash(a, b) {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a, 'hex');
+  const bufB = Buffer.from(b, 'hex');
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
 class AuthController {
@@ -145,7 +157,10 @@ class AuthController {
         locked_until: null,
       });
 
-      return res.json({ message: 'Login successful', token, refreshToken });
+      res.cookie(REFRESH_COOKIE_NAME, refreshToken, refreshCookieOptions);
+
+      // refreshToken NÃO vai mais no body
+      return res.json({ message: 'Login successful', token });
     } catch (error) {
       return handleError(res, error);
     }
@@ -153,25 +168,40 @@ class AuthController {
 
   async refresh(req, res) {
     try {
-      const { refreshToken } = req.body;
-      let decoded;
+      const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
+      if (!refreshToken) {
+        return res.status(401).json({ message: 'Refresh token ausente' });
+      }
+
+      let decoded;
       try {
         decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
       } catch {
+        res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
         return res
           .status(401)
           .json({ message: 'Invalid or expired refresh token' });
       }
 
       const incomingHash = hashToken(refreshToken);
-
-      const user = await User.findOne({
-        where: { id: decoded.id, refresh_token: incomingHash },
-      });
+      const user = await User.findByPk(decoded.id);
 
       if (!user) {
+        res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
         return res.status(401).json({ message: 'Refresh token revoked' });
+      }
+
+      // reuse detection com comparação constant-time
+      if (!safeCompareHash(user.refresh_token, incomingHash)) {
+        await user.update({ refresh_token: null });
+        res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
+        SocketService.emitToUser(user.id, 'force-logout', {
+          reason: 'refresh_token_reuse',
+        });
+        return res
+          .status(401)
+          .json({ message: 'Refresh token reuse detected' });
       }
 
       const newToken = jwt.sign({ id: user.id }, process.env.TOKEN_SECRET, {
@@ -185,8 +215,9 @@ class AuthController {
       );
 
       await user.update({ refresh_token: hashToken(newRefreshToken) });
+      res.cookie(REFRESH_COOKIE_NAME, newRefreshToken, refreshCookieOptions);
 
-      return res.json({ token: newToken, refreshToken: newRefreshToken });
+      return res.json({ token: newToken });
     } catch (error) {
       return handleError(res, error);
     }
@@ -194,16 +225,19 @@ class AuthController {
 
   async logout(req, res) {
     try {
-      const { refreshToken } = req.body;
+      const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME];
 
-      const user = await User.findOne({
-        where: { refresh_token: hashToken(refreshToken) },
-      });
-
-      if (user) {
-        await user.update({ refresh_token: null });
+      if (refreshToken) {
+        const incomingHash = hashToken(refreshToken);
+        const user = await User.findOne({
+          where: { refresh_token: incomingHash },
+        });
+        if (user) {
+          await user.update({ refresh_token: null });
+        }
       }
 
+      res.clearCookie(REFRESH_COOKIE_NAME, refreshCookieOptions);
       return res.status(200).json({ message: 'Logout successful' });
     } catch (error) {
       return handleError(res, error);

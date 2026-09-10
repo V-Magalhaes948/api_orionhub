@@ -36,8 +36,8 @@ router.post(
   validate(loginSchema),
   AuthController.login
 );
-router.post('/refresh', validate(refreshSchema), AuthController.refresh);
-router.post('/logout', validate(logoutSchema), AuthController.logout);
+router.post('/refresh', AuthController.refresh);
+router.post('/logout', AuthController.logout);
 router.post(
   '/forgot-password',
   forgotPasswordRateLimit,

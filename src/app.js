@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import { resolve } from 'path';
 import cors from 'cors';
 import { corsOptions } from './config/cors.js';
@@ -19,6 +20,7 @@ class App {
 
   middlewares() {
     this.app.use(express.json());
+    this.app.use(cookieParser());
     this.app.use(helmetConfig);
     this.app.use(cors(corsOptions));
     this.app.use(globalRateLimit);
@@ -26,6 +28,10 @@ class App {
     this.app.use(
       '/uploads',
       cors(corsOptions),
+      (req, res, next) => {
+        res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        next();
+      },
       express.static(resolve(__dirname, '..', 'uploads'))
     );
   }
