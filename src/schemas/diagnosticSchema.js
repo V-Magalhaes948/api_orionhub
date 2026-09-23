@@ -31,8 +31,8 @@ export const createDiagnosticSchema = {
     phone: z
       .string({ required_error: 'O telefone é obrigatório.' })
       .trim()
-      .min(1, 'O telefone é obrigatório.')
-      .max(9, 'O telefone deve ter no máximo 9 caracteres.'),
+      .min(11, 'O telefone é obrigatório.')
+      .max(12, 'O telefone deve ter no máximo 12 caracteres.'),
 
     segment: z
       .string({ required_error: 'O segmento da empresa é obrigatório.' })
