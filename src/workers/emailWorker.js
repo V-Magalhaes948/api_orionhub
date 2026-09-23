@@ -1,6 +1,9 @@
 import { Worker } from 'bullmq';
 import redis from '../queues/redis.js';
-import { sendPasswordResetEmail } from '../lib/mailer.js';
+import {
+  sendPasswordResetEmail,
+  sendDiagnosticNotificationEmail,
+} from '../lib/mailer.js';
 
 export const emailWorker = new Worker(
   'email',
@@ -8,6 +11,10 @@ export const emailWorker = new Worker(
     if (job.name === 'password-reset') {
       const { to, resetUrl } = job.data;
       await sendPasswordResetEmail(to, resetUrl);
+    }
+
+    if (job.name === 'diagnostic-notification') {
+      await sendDiagnosticNotificationEmail(job.data);
     }
   },
   { connection: redis }

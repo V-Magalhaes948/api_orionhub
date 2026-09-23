@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
+const NOTIFICATION_EMAIL = 'contato.felipe.rc34@gmail.com';
 
 export async function sendPasswordResetEmail(to, resetUrl) {
   const { data, error } = await resend.emails.send({
@@ -47,6 +48,37 @@ export async function sendVerificationCodeEmail(to, name, code) {
 
   if (error) {
     throw new Error(`Falha ao enviar e-mail de verificação: ${error.message}`);
+  }
+
+  return data;
+}
+
+export async function sendDiagnosticNotificationEmail(diagnostic) {
+  const { name, email, company, phone, segment, hasManualService, teamSize } =
+    diagnostic;
+
+  const { data, error } = await resend.emails.send({
+    from: process.env.RESEND_FROM_EMAIL,
+    to: NOTIFICATION_EMAIL,
+    subject: `Novo diagnóstico recebido — ${company || name}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2>Novo diagnóstico preenchido</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 6px 0; font-weight: bold;">Nome</td><td style="padding: 6px 0;">${name || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">E-mail</td><td style="padding: 6px 0;">${email || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Empresa</td><td style="padding: 6px 0;">${company || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Telefone</td><td style="padding: 6px 0;">${phone || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Segmento</td><td style="padding: 6px 0;">${segment || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Atendimento manual</td><td style="padding: 6px 0;">${hasManualService ? 'Sim' : 'Não'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Tamanho da equipe</td><td style="padding: 6px 0;">${teamSize || '-'}</td></tr>
+        </table>
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(`Falha ao enviar e-mail de notificação: ${error.message}`);
   }
 
   return data;

@@ -16,6 +16,7 @@ import healthRouter from './health.js';
 import promptTemplateRouter from './promptTemplate.js';
 import storesRouter from './stores.js';
 import notificationRouter from './notifications.js';
+import diagnosticRouter from './diagnostic.js';
 
 import authMiddleware from '../middlewares/auth.js';
 import adminMiddleware from '../middlewares/adminOnly.js';
@@ -72,6 +73,7 @@ router.use('/plans', planRouter);
 router.use('/health', healthRouter);
 router.use('/v1/stores', storesRouter);
 router.use('/notifications', authMiddleware, notificationRouter);
+router.use('/diagnostics', diagnosticRouter);
 
 // Catch-alls em '/' — SEMPRE por último, senão engolem tudo que vier depois
 router.use('/', authMiddleware, requireActivePlan(), flowStepTest);
