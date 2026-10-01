@@ -69,6 +69,7 @@ class AuthController {
         verification_attempts: 0,
       });
 
+      let emailSent = true;
       try {
         await sendVerificationCodeEmail(
           normalizedEmail,
@@ -76,6 +77,7 @@ class AuthController {
           verificationCode
         );
       } catch (mailError) {
+        emailSent = false;
         console.error('Failed to send verification email:', mailError);
       }
 
@@ -83,7 +85,10 @@ class AuthController {
         newUser.toJSON();
 
       return res.status(201).json({
-        message: 'Conta criada. Verifique seu e-mail para ativar a conta.',
+        message: emailSent
+          ? 'Conta criada. Verifique seu e-mail para ativar a conta.'
+          : 'Conta criada, mas não conseguimos enviar o código. Solicite um novo envio.',
+        email_sent: emailSent,
         user: {
           id: newUser.id,
           name: newUser.name,
