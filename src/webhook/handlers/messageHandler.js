@@ -64,9 +64,13 @@ function resolveContactIdentity(webhookPayload) {
   if (remoteJid.includes('@g.us')) return null;
 
   if (remoteJid.includes('@s.whatsapp.net') || remoteJid.includes('@lid')) {
+    const remoteJidAlt = data?.key?.remoteJidAlt || '';
     return {
       contactIdentity: remoteJid,
       isLid: remoteJid.endsWith('@lid'),
+      altPhoneJid: remoteJidAlt.endsWith('@s.whatsapp.net')
+        ? remoteJidAlt
+        : null,
       previousIdentity: data?.key?.previousRemoteJid || null,
     };
   }
@@ -159,7 +163,7 @@ export default async function messageHandler(webhookPayload) {
 
   const identity = resolveContactIdentity(webhookPayload);
   if (!identity) return;
-  const { contactIdentity, isLid, previousIdentity } = identity;
+  const { contactIdentity, isLid, previousIdentity, altPhoneJid } = identity;
 
   const messageId = data?.key?.id;
   const senderName = data?.pushName ?? null;
@@ -204,6 +208,14 @@ export default async function messageHandler(webhookPayload) {
   let stillPending = isLid;
 
   if (isLid) {
+    if (altPhoneJid) {
+      await ContactIdentityService.upsertIdentity(
+        bot.id,
+        contactIdentity,
+        altPhoneJid
+      );
+    }
+
     const knownPhone = await ContactIdentityService.findPhoneByLid(
       bot.id,
       contactIdentity
