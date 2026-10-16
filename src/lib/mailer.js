@@ -3,6 +3,13 @@ import { Resend } from 'resend';
 const resend = new Resend(process.env.RESEND_API_KEY);
 const NOTIFICATION_EMAIL = 'contato.felipe.rc34@gmail.com';
 
+const esc = (v) =>
+  String(v ?? '-')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 export async function sendPasswordResetEmail(to, resetUrl) {
   const { data, error } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL,
@@ -54,8 +61,7 @@ export async function sendVerificationCodeEmail(to, name, code) {
 }
 
 export async function sendDiagnosticNotificationEmail(diagnostic) {
-  const { name, email, company, phone, segment, hasManualService, teamSize } =
-    diagnostic;
+  const { name, company, phone, segment, teamSize } = diagnostic;
 
   const { data, error } = await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL,
@@ -65,13 +71,11 @@ export async function sendDiagnosticNotificationEmail(diagnostic) {
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
         <h2>Novo diagnóstico preenchido</h2>
         <table style="width: 100%; border-collapse: collapse;">
-          <tr><td style="padding: 6px 0; font-weight: bold;">Nome</td><td style="padding: 6px 0;">${name || '-'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">E-mail</td><td style="padding: 6px 0;">${email || '-'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">Empresa</td><td style="padding: 6px 0;">${company || '-'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">Telefone</td><td style="padding: 6px 0;">${phone || '-'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">Segmento</td><td style="padding: 6px 0;">${segment || '-'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">Atendimento manual</td><td style="padding: 6px 0;">${hasManualService ? 'Sim' : 'Não'}</td></tr>
-          <tr><td style="padding: 6px 0; font-weight: bold;">Tamanho da equipe</td><td style="padding: 6px 0;">${teamSize || '-'}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Nome</td><td style="padding: 6px 0;">${esc(name)}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Empresa</td><td style="padding: 6px 0;">${esc(company)}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Telefone</td><td style="padding: 6px 0;">${esc(phone)}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Segmento</td><td style="padding: 6px 0;">${esc(segment)}</td></tr>
+          <tr><td style="padding: 6px 0; font-weight: bold;">Tamanho da equipe</td><td style="padding: 6px 0;">${esc(teamSize)}</td></tr>
         </table>
       </div>
     `,

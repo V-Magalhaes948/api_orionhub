@@ -18,20 +18,12 @@ export default class Diagnostic extends Model {
           type: Sequelize.STRING,
           allowNull: false,
         },
-        email: {
-          type: Sequelize.STRING,
-          allowNull: false,
-        },
         phone: {
           type: Sequelize.STRING,
           allowNull: false,
         },
         segment: {
           type: Sequelize.STRING,
-          allowNull: false,
-        },
-        hasManualService: {
-          type: Sequelize.ENUM('Sim', 'Não'),
           allowNull: false,
         },
         teamSize: {

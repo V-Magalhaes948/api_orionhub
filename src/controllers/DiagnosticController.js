@@ -6,23 +6,13 @@ import { emailQueue } from '../queues/emailQueue.js';
 class DiagnosticController {
   async store(req, res) {
     try {
-      const {
-        name,
-        email,
-        company,
-        phone,
-        segment,
-        hasManualService,
-        teamSize,
-      } = req.body;
+      const { name, company, phone, segment, teamSize } = req.body;
 
       const diagnostic = await Diagnostic.create({
         name,
-        email,
         company,
         phone,
         segment,
-        hasManualService,
         teamSize,
       });
 
@@ -37,11 +27,9 @@ class DiagnosticController {
 
       await emailQueue.add('diagnostic-notification', {
         name,
-        email,
         company,
         phone,
         segment,
-        hasManualService,
         teamSize,
       });
 
