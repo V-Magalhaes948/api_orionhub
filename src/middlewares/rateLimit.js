@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import rateLimitRedis from '../lib/rateLimitRedis.js';
 
@@ -76,7 +76,7 @@ export const verifyEmailRateLimit = buildRateLimit('verify-email', {
   max: 8,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.body?.email || req.ip, // [FIX] chave por e-mail, cai pro IP se não tiver
+  keyGenerator: (req) => req.body?.email || ipKeyGenerator(req.ip),
   message: {
     message:
       'Muitas tentativas de verificação. Tente novamente em alguns minutos.',
